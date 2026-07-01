@@ -24,6 +24,19 @@ NetgenCxxWrap_jll   libnetgen_cxxwrap: boring 1:1 CxxWrap wrapper of Netgen's C+
 Netgen.jl           this package — Julian conveniences + hierarchy/mapping helpers
 ```
 
+## Documentation
+
+Full docs are built with [Documenter.jl](https://github.com/JuliaDocs/Documenter.jl)
+from `docs/src/` (upstream references, wrapped vs missing APIs, worked examples).
+After `gen/build_local.jl`:
+
+```julia
+julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+julia --project=docs docs/make.jl
+```
+
+Open `docs/build/index.html`.
+
 ## Example: refine a 2D disk and read the mesh hierarchy
 
 Mesh a unit disk coarsely, then refine it. New boundary nodes snap onto the true
@@ -273,15 +286,83 @@ correspond to `boundary_regions` values (segment indices). 2D `cell_regions` /
 `boundary_regions` (topological region ids) still work. No fake 2D names are
 invented; treat 2D material/boundary *names* as unavailable via this path.
 
+Per-element region names (via `Mesh::GetRegionName`):
+
 ```julia
-element_orders(mesh); element_order(mesh)           # p-order readers (read-only)
-surface_element_orders(mesh); surface_element_order(mesh)
-hp_element_levels(mesh)                              # 3×ncells, -1 = not hp-refined
+region_name_volume(mesh, enr)      # 3D cell material name
+region_name_surface(mesh, senr)    # 3D boundary triangle name
+region_name_segment(mesh, segnr)   # 2D/3D boundary segment name
+material_codim_name(mesh, codim, region_nr)  # Ngx GetMaterialCD<DIM>
 ```
 
-hp helpers are **read-only readiness**: a consumer can ask what orders/hp-levels
-exist. Applying per-element p-refinement would need Netgen's exported order
-*setters* wrapped 1:1; that is deliberately **not** done in this package yet.
+### FEM geometry (curved maps + parent topology)
+
+Curved element maps (`Ngx_Mesh::ElementTransformation`, second-order meshes):
+
+```julia
+volume_element_transformation(mesh, enr, xi)     # 3D tet, xi length 3
+surface_element_transformation(mesh, senr, xi)   # 3D boundary tri
+domain_element_transformation(mesh, enr, xi)     # 2D tri
+segment_element_transformation(mesh, segnr, xi)
+volume_element_transformations(mesh, enr, xis)   # batch 3×npts
+```
+
+Parent edge/face maps are **off by default**. Enable before refinement:
+
+```julia
+enable_topology_table!(mesh, "parentedges")
+enable_topology_table!(mesh, "parentfaces")
+refine!(mesh)
+has_parent_edges(mesh)
+parent_edges(mesh, enr); parent_faces(mesh, fnr); face_edges(mesh, fnr)
+```
+
+### hp-adaptivity (read + apply)
+
+Netgen.jl exposes both **reading** and **applying** hp/p metadata through strict
+1:1 `Ngx_Mesh` bindings. Netgen.jl does **not** implement an hp-adaptive solve
+strategy — consumers own marking policies, error estimators, and solvers.
+
+**Read** (query current state):
+
+```julia
+element_orders(mesh); element_order(mesh)
+element_orders_xyz(mesh)                             # anisotropic (ox, oy, oz)
+surface_element_orders(mesh)                         # 3D boundary
+hp_element_levels(mesh)                              # 3×ncells; -1 = no hp table
+cluster_rep_vertices(mesh); cluster_rep_elements(mesh)
+```
+
+**Apply on a live mesh** (in place):
+
+```julia
+set_element_order!(mesh, enr, order)                 # single-cell p set
+set_element_orders!(mesh, orders)                  # bulk isotropic orders
+set_surface_element_order!(mesh, enr, order)       # 3D boundary
+
+mark_for_ngx_refinement!(mesh, marked)             # mark cells 1:ncells
+ngx_refine!(mesh; reftype=NG_REFINE_P)             # marked p-refinement
+ngx_refine!(mesh; reftype=NG_REFINE_HP)            # marked hp-refinement
+hp_refine!(mesh; levels=1)                         # global hp split (SPLIT_HP)
+split_alfeld!(mesh)                                 # Alfeld hp split
+```
+
+**Apply through a live session** (bumps `generation`; finest level only unless
+noted):
+
+```julia
+request_set_element_orders!(s, orders)               # in-place p set
+request_marked_p_refinement!(s, marked)            # in-place marked p
+request_marked_hp_refinement!(s, marked)             # in-place marked hp
+request_hp_refine!(s; levels=1)                      # global hp split
+request_split_alfeld!(s)                             # Alfeld split
+request_marked_refinement!(s, marked; refine_hp=true)  # append hp-refined level
+```
+
+Refinement-type constants: `NG_REFINE_H`, `NG_REFINE_P`, `NG_REFINE_HP`.
+
+In-place hp/p operations **invalidate** snapshots of the finest level (same as
+`request_second_order!`) — check `snapshot.generation != generation(session)`.
 
 ### Integration contract
 
@@ -306,10 +387,10 @@ Consumer provides    PartitionGraph, cell/edge weights, METIS/ParMETIS backend
 ```
 
 Netgen.jl does **not** call METIS/ParMETIS and does **not** own partition policy.
-`native_partition_hint(mesh)` currently returns `nothing`: Netgen's partition
-data (`GetDistantProcs`, `GetGlobalVertexNum`) is MPI-only and the bound artifact
-is serial, so there is no native serial partition array to expose (documented,
-not invented).
+`native_partition_hint(mesh)` wraps `GetGlobalVertexNum` / `GetDistantProcs`: on
+the current serial build, `global_vertex_ids` is the identity `1:np` and each
+`distant_procs[i]` is empty; on an MPI-enabled build these become true global
+ids and remote ranks.
 
 ## Status
 
