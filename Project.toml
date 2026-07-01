@@ -1,14 +1,18 @@
 name = "Netgen"
 uuid = "0a3734f8-1dfd-4ffb-90f2-cbaa38dcac37"
-authors = ["Jukka Aho <ahojukka5@gmail.com>"]
 version = "0.1.0"
+authors = ["Jukka Aho <ahojukka5@gmail.com>"]
 
 [deps]
 Artifacts = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 CxxWrap = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 OCCT_jll = "baad4e97-8daa-5946-aac2-2edac59d34e1"
+OpenCascade = "7c4e8f2a-9b1d-4e6c-a3f8-2d5e6b7c8a9f"
 Zlib_jll = "83775a58-1f1d-513f-b197-d71354ab007a"
+
+[sources]
+OpenCascade = {path = "/Users/jukka/dev/NGSolveNetgen_jll/OpenCascade.jl"}
 
 [compat]
 CxxWrap = "0.17"
@@ -19,6 +23,9 @@ julia = "1.6"
 
 [extras]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+OpenCascade = "7c4e8f2a-9b1d-4e6c-a3f8-2d5e6b7c8a9f"
+Test = "8dfed614-e22c-5e08-8aa1-fd6e373b5a16"
 
 [targets]
 docs = ["Documenter"]
+test = ["Test", "OpenCascade"]
