@@ -2,18 +2,18 @@
 # Local development build of libnetgen_cxxwrap, for iterating without the
 # registry. Compiles NetgenCxxWrap_jll/bundled (the CxxWrap module) against the
 # locally-bound NGSolveNetgen artifact, OCCT_jll and the JlCxx/libcxxwrap_julia
-# shipped with CxxWrap.jl, then binds the result into Netgen.jl/Artifacts.toml as
+# shipped with CxxWrap.jl, then binds the result into Delone.jl/Artifacts.toml as
 # the "libnetgen_cxxwrap" artifact (this platform only; cross-platform binaries
 # come from NetgenCxxWrap_jll/build_tarballs.jl once NGSolveNetgen_jll is
 # registered).
 #
-# Run:  julia --project=Netgen.jl Netgen.jl/gen/build_local.jl
+# Run:  julia --project=Delone.jl Delone.jl/gen/build_local.jl
 using Pkg
 using Pkg.Artifacts
 using TOML
 using CxxWrap
 
-const PKG = normpath(joinpath(@__DIR__, ".."))                       # Netgen.jl
+const PKG = normpath(joinpath(@__DIR__, ".."))                       # Delone.jl
 const BUNDLED = normpath(joinpath(PKG, "..", "NetgenCxxWrap_jll", "bundled"))
 const ARTIFACTS_TOML = joinpath(PKG, "Artifacts.toml")
 

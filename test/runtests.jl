@@ -1,21 +1,26 @@
-using Netgen
+using Delone
+const I = Delone.Internals
 using Test
 
-# OpenCascade.jl is a test dependency (`Pkg.test()`). When running this file
-# directly in the monorepo, add the sibling package if needed.
-const _OC_PATH = normpath(@__DIR__, "..", "..", "OpenCascade.jl")
-if Base.find_package("OpenCascade") === nothing && isdir(_OC_PATH)
-    import Pkg
-    Pkg.develop(Pkg.PackageSpec(path=_OC_PATH))
+# Monge.jl (CAD modeling, package "Monge") is a test dependency (`Pkg.test()`).
+# When running this file directly in the monorepo, add the sibling package if needed.
+const _OC_PATH = normpath(@__DIR__, "..", "..", "Monge.jl")
+if Base.find_package("Monge") === nothing && isdir(_OC_PATH)
+    if Base.find_package("Pkg") !== nothing
+        import Pkg
+        Pkg.develop(Pkg.PackageSpec(path=_OC_PATH))
+    end
 end
-using OpenCascade
+using Monge
 
 const STEP     = joinpath(@__DIR__, "fixtures", "frame.step")
 const CYLINDER = joinpath(@__DIR__, "fixtures", "cylinder.brep")  # unit cylinder, r=1, h=2
 
-@testset "Netgen.jl (CxxWrap, strict 1:1 names)" begin
-    # Netgen mesh core
+@testset "Delone.jl" begin
+    # Delone mesh core
     include("mesh.jl")
+    include("mesh_api.jl")
+    include("llm_feedback.jl")
     include("refinement.jl")
     include("hierarchy.jl")
     include("session.jl")

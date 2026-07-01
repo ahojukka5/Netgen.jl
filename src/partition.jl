@@ -1,5 +1,5 @@
 # --- partitioning / load-balancing data contract ----------------------------
-# Netgen.jl does NOT own domain decomposition. It exposes optional native
+# Delone.jl does NOT own domain decomposition. It exposes optional native
 # partition hints so a consumer can build PartitionGraph / METIS / ParMETIS input.
 
 """
@@ -15,14 +15,14 @@ Optional native partition hints from Netgen's MPI interface:
   on a serial build.
 
 This is **optional input** to a consumer partitioner, not a partitioning policy.
-Netgen.jl does not call METIS/ParMETIS or assign ownership.
+Delone.jl does not call METIS/ParMETIS or assign ownership.
 """
 function native_partition_hint(m)
-    nm = Ngx_Mesh(m)
-    np = GetNP(m)
+    nm = Internals.Ngx_Mesh(m)
+    np = Internals.GetNP(m)
     np == 0 && return (global_vertex_ids=Int[], distant_procs=Vector{Int}[])
     return (
-        global_vertex_ids = [Int(GetGlobalVertexNum(nm, i - 1)) + 1 for i in 1:np],
-        distant_procs = [collect(Int, GetDistantProcs(nm, 0, i - 1)) for i in 1:np],
+        global_vertex_ids = [Int(Internals.GetGlobalVertexNum(nm, i - 1)) + 1 for i in 1:np],
+        distant_procs = [collect(Int, Internals.GetDistantProcs(nm, 0, i - 1)) for i in 1:np],
     )
 end

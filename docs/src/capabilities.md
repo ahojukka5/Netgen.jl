@@ -1,16 +1,16 @@
 # Wrapped capabilities
 
-Bindings live in `NetgenCxxWrap_jll` (`libnetgen_cxxwrap`) and are loaded by
-`Netgen.jl`. C++ names are preserved 1:1; the sections below group them by
-workflow. For per-class method lists see `docs/API_COVERAGE.md` in the package
-tree.
+Raw bindings live in `NetgenCxxWrap_jll` (`libnetgen_cxxwrap`) and are loaded
+by `Delone.jl` under `Delone.Internals`; C++ names are preserved 1:1 there.
+The sections below group Delone.jl's high-level capabilities by workflow,
+noting the underlying Netgen/NGSolve entry points where useful. For per-class
+method lists see `docs/API_COVERAGE.md` in the package tree.
 
 ## Geometry input
 
 | Capability | Julia / C++ entry points |
 |------------|--------------------------|
-| STEP / IGES / BREP import | `load_step`, `load_iges`, `load_brep`, `load_geometry` → `LoadOCC_*` |
-| STL import | `load_stl` → `LoadSTL` |
+| STEP / IGES / BREP / STL import | `load_step`, `load_iges`, `load_brep`, `load_stl`, `load_geometry` → `LoadOCC_*` / `LoadSTL` |
 | 2D spline geometry file | `load_splinegeometry2d` |
 | 2D CSG | `Circle`, `Rectangle`, `CSG2d`, `geometry2d`, boolean `+` / `*` / `-` |
 | OCC programmatic 3D | OpenCascade.jl → `occ_geometry_from_brep_string(to_brep_string(shape))` |
@@ -18,15 +18,16 @@ tree.
 
 ## Mesh generation & core `Mesh` API
 
-| Capability | Entry points |
-|------------|--------------|
-| Generate from geometry | `generate_mesh`, `MeshingParameters`, `maxh!`, `NetgenGeometry.GenerateMesh` |
-| Node / element access | `GetNP`, `Point`, `VolumeElement`, `SurfaceElement`, `LineSegment`, `GetNE`, `GetNSE`, `GetNSeg`, `GetDimension` |
-| Build / modify mesh | `AddPoint`, `AddVolumeElement`, `AddSurfaceElement`, `AddSegment`, `assign` (`copy_mesh`) |
-| Topology | `UpdateTopology`, `GetTopology`, `GetNEdges`, `GetNFaces`, `GetEdgeVertices`, `GetFaceVertices`, `EnableTopologyTable` |
-| Quality / h-field | `CalcLocalH`, `SetGlobalH`, `ImproveMesh`, `CheckVolumeMesh`, `GetBox`, `AverageH`, … |
-| Mesh I/O | `Save`, `Load` |
-| Sub-mesh extraction | `GetSubMesh` |
+| Capability | Julian entry points | Internals (1:1) |
+|------------|---------------------|-----------------|
+| Generate from geometry | `generate_mesh`, `meshing_parameters` | `MeshingParameters`, `maxh!`, `GenerateMesh` |
+| Mesh I/O | `save_mesh`, `load_mesh` | `Save`, `Load` |
+| Counts / dimension | `num_nodes`, `num_cells`, `num_boundary_facets`, `mesh_dimension` | `GetNP`, `GetNE`, `GetNSE`, `GetDimension` |
+| Connectivity | `connectivity`, `points`, `tetrahedra`, `surface_triangles` | `Point`, `VolumeElement`, `SurfaceElement` |
+| Topology refresh | `update_topology!` | `UpdateTopology`, `GetTopology`, `GetNEdges`, `GetNFaces` |
+| Build / modify mesh | `copy_mesh`, `compress!` | `assign`, `AddPoint`, `AddVolumeElement`, … |
+| Quality / h-field | `check_mesh`, `improve_mesh!`, `optimize_volume!`, `mesh_bounding_box` | `CheckVolumeMesh`, `ImproveMesh`, `MeshVolume`, `OptimizeVolume`, `GetBox`, … |
+| Sub-mesh extraction | — | `GetSubMesh` |
 
 ## Refinement (geometry-aware)
 
@@ -35,7 +36,7 @@ tree.
 | Uniform refine | `refine!` → `Refinement.Refine` |
 | Marked bisection | `mark_for_refinement!`, `bisect!` → `BisectionOptions`, `Refinement.Bisect` |
 | Second-order curving | `make_second_order!` → `Refinement.MakeSecondOrder` |
-| Volume meshing driver | `MeshVolume`, `OptimizeVolume`, `RemoveIllegalElements`, `ConformToFreeSegments` |
+| Volume meshing driver | `optimize_volume!`, `improve_mesh!` (`MeshVolume`, `OptimizeVolume`, …) |
 
 ## `Ngx_Mesh` hierarchy & parent maps
 
@@ -64,6 +65,29 @@ tree.
 | Apply p / hp | `set_element_order!`, `set_element_orders!`, `ngx_refine!`, `hp_refine!`, `split_alfeld!` |
 | Session requests | `request_set_element_orders!`, `request_marked_p_refinement!`, `request_hp_refine!`, … |
 | Constants | `NG_REFINE_H`, `NG_REFINE_P`, `NG_REFINE_HP` |
+
+## Structured reports & introspection (Julia layer)
+
+Read-only, serializable feedback for solver drivers and LLM-driven workflows —
+see [Structured reports & introspection](@ref "Structured reports & introspection")
+for a full walkthrough.
+
+| Capability | Entry points |
+|------------|--------------|
+| Options validation | `MeshOptions`, `validate_options!` (throwing), `validate(::MeshOptions)` (non-throwing) |
+| Structured generation | `generate_mesh(...; result=true)` → `MeshGenerationResult`, `MeshGenerationDiagnostics` |
+| Mesh reports | `mesh_report` → `MeshReport` (`MeshValidationReport` + `MeshQualityReport` + `MeshTagReport` + topology); `isvalid`, `quality`/`mesh_quality`, `tag_report` |
+| Pre/post-meshing diagnostics | `meshability_report`, `meshing_diagnostics`, `suggest_mesh_fixes` |
+| Hierarchy/session reports | `hierarchy_report` → `MeshHierarchyReport` (`MeshLevelReport`, `TransferReport`); `refine!`/`refine_session!(...; result=true)` → `RefinementResult` |
+| Generic contract (OodiCore) | `report(x)`, `validate(x)`, `readiness(x, target)`, `to_namedtuple(x)` |
+| Readiness targets | `MeshingTarget`, `OodiImportTarget` → `oodi_snapshot_readiness`, `GeometricMultigridTarget` |
+
+## Export & preview formats
+
+| Capability | Entry points |
+|------------|--------------|
+| VTK / OBJ / SVG export | `export_vtk`, `export_obj`, `export_svg_2d`, `export_mesh_preview` |
+| Tempfile previews | `mesh_preview`, `mesh_previews` |
 
 ## Tags, regions & names
 
@@ -97,10 +121,11 @@ tree.
 
 ## OpenCASCADE interop
 
-CAD modeling lives in **OpenCascade.jl** (`OpenCascadeCxxWrap_jll`). Netgen imports
-meshable geometry via **`occ_geometry_from_brep_string`** (in-memory BREP from
-`to_brep_string`). File import remains **`load_step` / `load_iges` / `load_brep`**
-(nglib). See OpenCascade.jl docs for the full OCCT surface.
+CAD modeling lives in **OpenCascade.jl** (`OpenCascadeCxxWrap_jll`), not Delone.
+Delone.jl imports meshable geometry via **`occ_geometry_from_brep_string`**
+(in-memory BREP from `to_brep_string`). File import remains
+**`load_step` / `load_iges` / `load_brep`** (nglib). See OpenCascade.jl docs
+for the full OCCT surface.
 
 ## Test coverage
 

@@ -1,7 +1,9 @@
 # Upstream documentation
 
-Netgen.jl is a binding layer. For meshing theory, GUI usage, NGSolve integration,
-and the full C++ API, use the upstream projects directly.
+Delone.jl is a high-level meshing, refinement, and mesh-hierarchy package built
+on Netgen/NGSolve. For meshing theory, GUI usage, and the full Netgen/NGSolve
+C++ API, use the upstream projects directly; for raw backend bindings inside
+this package, see `Delone.Internals`.
 
 ## Netgen & NGSolve
 
@@ -34,8 +36,8 @@ when using OpenCascade.jl. Mesh via `occ_geometry_from_brep_string(to_brep_strin
 
 | Path | Content |
 |------|---------|
-| `Netgen.jl/README.md` | Package overview and integration contract (live session vs snapshots). |
-| `Netgen.jl/docs/API_COVERAGE.md` | Quantitative wrap coverage (Netgen ~94 % of `DLL_HEADER` mesh API; OCC &lt; 1 % of all OCCT). |
+| `Delone.jl/README.md` | Package overview and integration contract (live session vs snapshots). |
+| `Delone.jl/docs/API_COVERAGE.md` | Quantitative wrap coverage (Netgen ~94 % of `DLL_HEADER` mesh API; OCC &lt; 1 % of all OCCT). |
 | `NetgenCxxWrap_jll/docs/WRAPPING_PLAN.md` | Design: strict 1:1 binding policy and planned OCCT classes. |
 
 ## Indexing reminders

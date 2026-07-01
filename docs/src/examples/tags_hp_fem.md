@@ -3,7 +3,7 @@
 ## Region ids and names
 
 ```julia
-using Netgen
+using Delone
 
 mesh = generate_mesh(load_step("part.step"); maxh=0.5)
 
@@ -103,7 +103,7 @@ Off by default. Enable **before** refining:
 enable_topology_table!(mesh, "parentedges")
 enable_topology_table!(mesh, "parentfaces")
 refine!(mesh)
-Netgen.UpdateTopology(mesh)
+Delone.Internals.UpdateTopology(mesh)
 
 has_parent_edges(mesh)
 parent_edges(mesh, enr)           # orientation + parent edge indices
@@ -135,4 +135,4 @@ hint.global_vertex_ids    # per local vertex, global id (identity on serial buil
 hint.distant_procs        # per vertex, remote MPI ranks (empty on serial build)
 ```
 
-Netgen.jl does not call a partitioner or assign ownership.
+Delone.jl does not call a partitioner or assign ownership.

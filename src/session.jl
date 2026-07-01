@@ -51,16 +51,29 @@ at `maxh`. Any extra `kwargs` are stored verbatim in `metadata`. The session's
 `generation` starts at `0`. Grow it during the simulation with
 [`request_uniform_refinement!`](@ref) / [`request_marked_refinement!`](@ref).
 """
-function mesh_session(geometry; maxh::Real, kwargs...)
-    m = generate_mesh(geometry; maxh=maxh)
-    meta = Dict{Symbol,Any}(:maxh => Float64(maxh))
+function mesh_session(geometry; options=nothing, maxh::Union{Nothing,Real}=nothing, kwargs...)
+    if options === nothing
+        maxh === nothing &&
+            throw(ArgumentError("mesh_session requires maxh or options=MeshOptions(...)"))
+        options = mesh_options(; maxh=maxh, kwargs...)
+    end
+    res = generate_mesh_result(geometry, options)
+    res.success || throw(ErrorException("mesh_session: initial meshing failed: $(res.diagnostics)"))
+    m = res.mesh
+    meta = Dict{Symbol,Any}(:maxh => options.maxh, :options => options)
     for (k, v) in kwargs
         meta[k] = v
     end
     return MeshHierarchySession(geometry, Any[m], 0, meta)
 end
 
-"""nlevels(session) -> number of live mesh levels currently in the session."""
+"""
+    nlevels(session) -> Int
+
+Number of live mesh levels currently in the session. Distinct from
+[`num_levels`](@ref), which reads the raw ngx multigrid level count off a
+single mesh object.
+"""
 nlevels(s::MeshHierarchySession) = length(s.meshes)
 
 """coarsest(session) / finest(session) -> the coarsest / finest live mesh handle."""
@@ -147,7 +160,7 @@ end
 
 Append a new finest level by element-wise, geometry-aware **bisection** of a copy
 of the current finest mesh. `marked` is indexed by the **current finest level's
-volume elements** (`1:GetNE(finest(session))` for 3D; a `Bool` vector /
+volume elements** (`1:Internals.GetNE(finest(session))` for 3D; a `Bool` vector /
 predicate from an error indicator). Netgen adds conforming closure refinement as
 needed. Previous levels are preserved. Increments `generation(session)`.
 
@@ -160,7 +173,7 @@ function request_marked_refinement!(s::MeshHierarchySession, marked;
                                     onlyonce::Bool=false, maxlevel::Integer=0,
                                     refine_p::Bool=false, refine_hp::Bool=false)
     m = copy_mesh(finest(s))
-    UpdateTopology(m)
+    Internals.UpdateTopology(m)
     mark_for_refinement!(m, marked)
     bisect!(m; onlyonce=onlyonce, maxlevel=maxlevel,
             refine_p=refine_p, refine_hp=refine_hp)
@@ -243,7 +256,7 @@ Invalidates snapshots of the finest level. Bumps `generation(session)`.
 function request_marked_p_refinement!(s::MeshHierarchySession, marked;
                                       onlyonce::Bool=false)
     m = finest(s)
-    UpdateTopology(m)
+    Internals.UpdateTopology(m)
     mark_for_ngx_refinement!(m, marked)
     ngx_refine!(m; reftype=NG_REFINE_P, onlyonce=onlyonce)
     s.generation += 1
@@ -259,7 +272,7 @@ end
 function request_marked_hp_refinement!(s::MeshHierarchySession, marked;
                                         onlyonce::Bool=false)
     m = finest(s)
-    UpdateTopology(m)
+    Internals.UpdateTopology(m)
     mark_for_ngx_refinement!(m, marked)
     ngx_refine!(m; reftype=NG_REFINE_HP, onlyonce=onlyonce)
     s.generation += 1

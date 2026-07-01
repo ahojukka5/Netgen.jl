@@ -1,7 +1,9 @@
 # API coverage — Netgen & OpenCASCADE
 
 What fraction of the Netgen and OpenCASCADE C++ APIs are wrapped by
-`libnetgen_cxxwrap` (and therefore reachable from `Netgen` / `Netgen.OCC`).
+`libnetgen_cxxwrap` (and therefore reachable from `Delone.jl`). OCCT modeling
+itself is wrapped separately by **OpenCascade.jl**; the OpenCASCADE figures
+below describe that package's coverage, not this one's.
 
 Counts are measured from the installed headers of this build
 (`NGSolveNetgen_jll` artifact, `OCCT_jll` 7.9.3) and from the wrapper sources

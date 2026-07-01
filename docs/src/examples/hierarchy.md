@@ -11,7 +11,7 @@ After refining in place, parent data describes the immediate coarse→fine
 relation on that mesh object:
 
 ```julia
-using Netgen
+using Delone
 
 mesh = generate_mesh(geometry2d(Circle(0,0,1,"d","c")); maxh=0.4)
 refine!(mesh)
@@ -42,7 +42,7 @@ A **session** owns geometry and one mesh handle per level. Refinement **requests
 mutate the session and bump a `generation` counter:
 
 ```julia
-using Netgen
+using Delone
 
 geom = load_step("part.step")
 s = mesh_session(geom; maxh=0.5)
@@ -64,8 +64,16 @@ request_marked_refinement!(s, marked)   # adaptive, appends level
 request_second_order!(s)                # in-place on finest level only
 ```
 
-`level_mesh(s, k)` returns the **live** handle for level `k`. Expert mutation is
-possible via `unsafe_level_mesh` / `mutate_level_mesh!` (see docstrings).
+`level_mesh(s, k)` returns the **live** handle for level `k`. For an in-place
+mutation that isn't one of the `request_*!` refinements, use
+`mutate_level_mesh!` to keep `generation` tracking correct instead of mutating
+`unsafe_level_mesh(s, k)` directly:
+
+```julia
+mutate_level_mesh!(s, 2) do m       # bump_generation=true by default
+    # in-place mesh mutation via Delone.Internals if needed
+end                                  # -> returns the session; generation bumped
+```
 
 ## Snapshots for downstream consumers
 
@@ -98,12 +106,12 @@ Transfer weights use documented semantics (`transfer_weight_semantics` →
 ## Integration contract (summary)
 
 ```
-Netgen.jl provides   live handles, refinement requests, parent maps,
+Delone.jl provides   live handles, refinement requests, parent maps,
                      region/tag data, copied snapshots, partition hints
 Consumer provides    FE spaces, DOFs, operators, estimators, partition policy
 ```
 
-Netgen.jl does **not** assemble prolongation/restriction matrices or run linear
+Delone.jl does **not** assemble prolongation/restriction matrices or run linear
 solvers.
 
-Next: [Tags, hp-adaptivity & FEM data](@ref "Tags, hp-adaptivity & FEM data").
+Next: [Structured reports & introspection](@ref "Structured reports & introspection").

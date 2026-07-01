@@ -1,9 +1,9 @@
 using Documenter
-using Netgen
+using Delone
 
 makedocs(
-    modules = [Netgen],
-    sitename = "Netgen.jl",
+    modules = [Delone],
+    sitename = "Delone.jl",
     authors = "Jukka Aho",
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
@@ -19,6 +19,7 @@ makedocs(
             "Meshing" => "examples/meshing.md",
             "Refinement" => "examples/refinement.md",
             "Mesh hierarchies & sessions" => "examples/hierarchy.md",
+            "Structured reports & introspection" => "examples/introspection.md",
             "Tags, hp-adaptivity & FEM data" => "examples/tags_hp_fem.md",
         ],
         "Development" => "development.md",

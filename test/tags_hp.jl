@@ -4,8 +4,8 @@
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
     V = volume_tetrahedra(m)
-    @test size(V) == (4, Netgen.GetNE(m))
-    @test all(1 .<= V .<= Netgen.GetNP(m))
+    @test size(V) == (4, I.GetNE(m))
+    @test all(1 .<= V .<= I.GetNP(m))
     # 2D-only extractors must refuse a 3D mesh
     @test_throws ArgumentError triangles2d(m)
     @test_throws ArgumentError segments2d(m)
@@ -15,11 +15,11 @@ end
     disk = Circle(0.0, 0.0, 1.0, "disk", "circle")
     m = generate_mesh(geometry2d(disk); maxh=0.4)
     T = triangles2d(m)
-    @test size(T) == (3, Netgen.GetNSE(m))
-    @test all(1 .<= T .<= Netgen.GetNP(m))
+    @test size(T) == (3, I.GetNSE(m))
+    @test all(1 .<= T .<= I.GetNP(m))
     S = segments2d(m)
-    @test size(S) == (2, Netgen.GetNSeg(m))
-    @test all(1 .<= S .<= Netgen.GetNP(m))
+    @test size(S) == (2, I.GetNSeg(m))
+    @test all(1 .<= S .<= I.GetNP(m))
     @test_throws ArgumentError volume_tetrahedra(m)
 end
 
@@ -28,17 +28,17 @@ end
     m = generate_mesh(geom; maxh=40.0)
     mats = material_names(m)
     @test mats isa Dict{Int32,String}
-    @test length(mats) == Netgen.GetNDomains(m)
+    @test length(mats) == I.GetNDomains(m)
     @test haskey(mats, Int32(1))
     bnames = boundary_names(m)
     @test bnames isa Dict{Int32,String}
-    @test length(bnames) == Netgen.GetNFD(m)
+    @test length(bnames) == I.GetNFD(m)
     # region id vectors line up with the name dictionaries
     cr = cell_regions(m)
-    @test length(cr) == Netgen.GetNE(m)
+    @test length(cr) == I.GetNE(m)
     @test all(r -> haskey(mats, r), cr)
     br = boundary_regions(m)
-    @test length(br) == Netgen.GetNSE(m)
+    @test length(br) == I.GetNSE(m)
     @test all(r -> haskey(bnames, r), br)
 end
 
@@ -46,16 +46,16 @@ end
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
     eos = element_orders(m)
-    @test length(eos) == Netgen.GetNE(m)
+    @test length(eos) == I.GetNE(m)
     @test all(eos .>= 1)
     @test element_order(m) == maximum(eos)
     seos = surface_element_orders(m)
-    @test length(seos) == Netgen.GetNSE(m)
+    @test length(seos) == I.GetNSE(m)
     @test all(seos .>= 1)
     @test surface_element_order(m) >= 1
     # hp levels: sentinel -1 for a non-hp mesh, shape 3×NE
     L = hp_element_levels(m)
-    @test size(L) == (3, Netgen.GetNE(m))
+    @test size(L) == (3, I.GetNE(m))
     @test all(L .== -1)
     # curving to second order keeps orders sensible (>= 1)
     make_second_order!(m)
@@ -67,14 +67,14 @@ end
     m = generate_mesh(geometry2d(disk); maxh=0.4)
     @test_throws ArgumentError surface_element_orders(m)
     # element_orders still works on the 2D cells (triangles)
-    @test length(element_orders(m)) == Netgen.GetNSE(m)
+    @test length(element_orders(m)) == I.GetNSE(m)
 end
 
 @testset "partition contract: native_partition_hint (serial identity)" begin
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
     hint = native_partition_hint(m)
-    np = Netgen.GetNP(m)
+    np = I.GetNP(m)
     @test hint.global_vertex_ids == collect(1:np)
     @test length(hint.distant_procs) == np
     @test all(isempty, hint.distant_procs)
@@ -95,10 +95,10 @@ end
     m = generate_mesh(geometry2d(disk); maxh=0.4)
     # topological region ids DO work in 2D
     cr = cell_regions(m)
-    @test length(cr) == Netgen.GetNSE(m)
+    @test length(cr) == I.GetNSE(m)
     @test all(cr .>= 1)
     br = boundary_regions(m)
-    @test length(br) == Netgen.GetNSeg(m)
+    @test length(br) == I.GetNSeg(m)
     @test all(br .>= 1)
     # NAMES: 2D material names are unavailable through this path (GetNDomains==0),
     # so material_names is empty. We assert the *current* behavior rather than
@@ -106,7 +106,7 @@ end
     mats = material_names(m)
     @test mats isa Dict{Int32,String}
     @test isempty(mats)
-    @test Netgen.GetNDomains(m) == 0
+    @test I.GetNDomains(m) == 0
     # boundary_names returns a Dict but its keys (face-descriptor indices) are not
     # guaranteed to correspond to boundary_regions (segment indices) in 2D.
     bnames = boundary_names(m)

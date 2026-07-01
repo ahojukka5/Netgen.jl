@@ -1,30 +1,30 @@
 @testset "refine! in place (GetGeometry -> GetRefinement -> Refine)" begin
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
-    ne0 = Netgen.GetNE(m)
+    ne0 = I.GetNE(m)
     refine!(m)
-    @test Netgen.GetNE(m) > ne0
+    @test I.GetNE(m) > ne0
 end
 
 @testset "marked bisection refinement (mark_for_refinement! + bisect!)" begin
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
-    Netgen.UpdateTopology(m)
-    ne0 = Netgen.GetNE(m)
+    I.UpdateTopology(m)
+    ne0 = I.GetNE(m)
     # mark a handful of elements and bisect
     marked = falses(ne0)
     marked[1:max(1, ne0 ÷ 4)] .= true
     mark_for_refinement!(m, marked)
     bisect!(m)
-    @test Netgen.GetNE(m) > ne0          # marked refinement grew the mesh
+    @test I.GetNE(m) > ne0          # marked refinement grew the mesh
 end
 
 @testset "second-order curving (make_second_order!)" begin
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
-    np0 = Netgen.GetNP(m)
+    np0 = I.GetNP(m)
     make_second_order!(m)
-    @test Netgen.GetNP(m) > np0           # edge midpoints added
+    @test I.GetNP(m) > np0           # edge midpoints added
 end
 
 @testset "geometry-aware refinement snaps nodes to the curved surface" begin
@@ -34,13 +34,13 @@ end
     radius(p) = sqrt(p[1]^2 + p[2]^2)
     geom = load_brep(CYLINDER)
     m = generate_mesh(geom; maxh=0.5)
-    np0 = Netgen.GetNP(m); X0 = points(m)
+    np0 = I.GetNP(m); X0 = points(m)
     lateral0 = [j for j in 1:np0 if abs(radius(X0[:, j]) - 1) < 1e-9]
     @test !isempty(lateral0)
     @test maximum(abs(radius(X0[:, j]) - 1) for j in lateral0) < 1e-12  # coarse on surface
 
     refine!(m)
-    np1 = Netgen.GetNP(m); X1 = points(m); P = parent_nodes(m)
+    np1 = I.GetNP(m); X1 = points(m); P = parent_nodes(m)
     latset = Set(lateral0)
     newlat = [j for j in (np0 + 1):np1 if P[1, j] in latset && P[2, j] in latset]
     @test !isempty(newlat)
@@ -51,7 +51,7 @@ end
 
     # and it keeps following the surface through a second refinement
     refine!(m)
-    np2 = Netgen.GetNP(m); X2 = points(m)
+    np2 = I.GetNP(m); X2 = points(m)
     lateral2 = [j for j in 1:np2 if abs(radius(X2[:, j]) - 1) < 1e-9]
     @test length(lateral2) > length(lateral0)
     @test maximum(abs(radius(X2[:, j]) - 1) for j in lateral2) < 1e-12
@@ -63,16 +63,16 @@ end
     radius(p) = sqrt(p[1]^2 + p[2]^2)
     geom = load_brep(CYLINDER)
     m = generate_mesh(geom; maxh=0.5)
-    np0 = Netgen.GetNP(m); ne0 = Netgen.GetNE(m); X0 = points(m)
+    np0 = I.GetNP(m); ne0 = I.GetNE(m); X0 = points(m)
     lateral0 = Set(j for j in 1:np0 if abs(radius(X0[:, j]) - 1) < 1e-9)
 
-    Netgen.UpdateTopology(m)
+    I.UpdateTopology(m)
     T = tetrahedra(m)
     marked = [any(in(lateral0), T[:, e]) for e in 1:ne0]   # error indicator stand-in
     mark_for_refinement!(m, marked)
     bisect!(m)
 
-    np1 = Netgen.GetNP(m); X1 = points(m); P = parent_nodes(m)
+    np1 = I.GetNP(m); X1 = points(m); P = parent_nodes(m)
     newlat = [j for j in (np0 + 1):np1 if P[1, j] in lateral0 && P[2, j] in lateral0]
     @test !isempty(newlat)
     @test minimum(radius((X1[:, P[1, j]] .+ X1[:, P[2, j]]) ./ 2) for j in newlat) < 0.99

@@ -1,12 +1,12 @@
 # --- FEM geometry: curved maps, parent topology, periodic pairs -----------
-# Julia helpers over strict 1:1 Ngx_Mesh bindings from netgen_ngx3.cpp.
+# Julia helpers over strict 1:1 Internals.Ngx_Mesh bindings from netgen_ngx3.cpp.
 #
 # Indexing: Julia-facing APIs use **1-based** cell/vertex ids where they refer
-# to mesh elements or nodes in the rest of Netgen.jl. The C++ Ngx entry points
-# that expect 0-based indices (ElementTransformation, GetParentEdges, …) are
+# to mesh elements or nodes in the rest of Delone.jl. The C++ Ngx entry points
+# that expect 0-based indices (ElementTransformation, Internals.GetParentEdges, …) are
 # converted here.
 
-_ngx(m) = Ngx_Mesh(m)
+_ngx(m) = Internals.Ngx_Mesh(m)
 
 # --- curved element transformations -----------------------------------------
 
@@ -30,7 +30,7 @@ function volume_element_transformation(m, enr::Integer, xi::AbstractVector{<:Rea
     length(xi) == 3 || throw(ArgumentError("xi must have length 3 (got $(length(xi)))"))
     x = zeros(Float64, 3)
     jac = zeros(Float64, 9)
-    ElementTransformation33(_ngx(m), Int(enr) - 1, collect(Float64, xi), x, jac)
+    Internals.ElementTransformation33(_ngx(m), Int(enr) - 1, collect(Float64, xi), x, jac)
     return x, _unpack_jacobian(jac, 3, 3)
 end
 
@@ -40,11 +40,11 @@ end
 Boundary triangle map in 3D: `xi` length 2, `x` length 3, `J` is 3×2.
 """
 function surface_element_transformation(m, senr::Integer, xi::AbstractVector{<:Real})
-    GetDimension(m) == 3 || throw(ArgumentError("surface_element_transformation is 3D only"))
+    Internals.GetDimension(m) == 3 || throw(ArgumentError("surface_element_transformation is 3D only"))
     length(xi) == 2 || throw(ArgumentError("xi must have length 2"))
     x = zeros(Float64, 3)
     jac = zeros(Float64, 6)
-    ElementTransformation23(_ngx(m), Int(senr) - 1, collect(Float64, xi), x, jac)
+    Internals.ElementTransformation23(_ngx(m), Int(senr) - 1, collect(Float64, xi), x, jac)
     return x, _unpack_jacobian(jac, 3, 2)
 end
 
@@ -54,11 +54,11 @@ end
 Domain triangle map in 2D: `xi` length 2, `x` length 2, `J` is 2×2.
 """
 function domain_element_transformation(m, enr::Integer, xi::AbstractVector{<:Real})
-    GetDimension(m) == 2 || throw(ArgumentError("domain_element_transformation is 2D only"))
+    Internals.GetDimension(m) == 2 || throw(ArgumentError("domain_element_transformation is 2D only"))
     length(xi) == 2 || throw(ArgumentError("xi must have length 2"))
     x = zeros(Float64, 2)
     jac = zeros(Float64, 4)
-    ElementTransformation22(_ngx(m), Int(enr) - 1, collect(Float64, xi), x, jac)
+    Internals.ElementTransformation22(_ngx(m), Int(enr) - 1, collect(Float64, xi), x, jac)
     return x, _unpack_jacobian(jac, 2, 2)
 end
 
@@ -70,16 +70,16 @@ Boundary segment map: in 3D `x` length 3 and `J` length 3 (column vector); in 2D
 """
 function segment_element_transformation(m, segnr::Integer, xi::AbstractVector{<:Real})
     length(xi) == 1 || throw(ArgumentError("xi must have length 1"))
-    d = Int(GetDimension(m))
+    d = Int(Internals.GetDimension(m))
     if d == 3
         x = zeros(Float64, 3)
         jac = zeros(Float64, 3)
-        ElementTransformation13(_ngx(m), Int(segnr) - 1, collect(Float64, xi), x, jac)
+        Internals.ElementTransformation13(_ngx(m), Int(segnr) - 1, collect(Float64, xi), x, jac)
         return x, jac
     elseif d == 2
         x = zeros(Float64, 2)
         jac = zeros(Float64, 2)
-        ElementTransformation12(_ngx(m), Int(segnr) - 1, collect(Float64, xi), x, jac)
+        Internals.ElementTransformation12(_ngx(m), Int(segnr) - 1, collect(Float64, xi), x, jac)
         return x, jac
     else
         throw(ArgumentError("segment_element_transformation: unsupported dimension $d"))
@@ -99,7 +99,7 @@ function volume_element_transformations(m, enr::Integer, xis::AbstractMatrix{<:R
     xi = vec(collect(Float64, xis))
     x = zeros(Float64, 3 * npts)
     jac = zeros(Float64, 9 * npts)
-    MultiElementTransformation33(_ngx(m), Int(enr) - 1, npts, xi, x, jac)
+    Internals.MultiElementTransformation33(_ngx(m), Int(enr) - 1, npts, xi, x, jac)
     X = reshape(x, 3, npts)
     Js = [_unpack_jacobian(jac[(k - 1) * 9 + 1 : k * 9], 3, 3) for k in 1:npts]
     return X, Js
@@ -110,23 +110,23 @@ end
 """
     enable_topology_table!(mesh, name, set=true)
 
-Enable or disable a `MeshTopology` table on `mesh` (`EnableTopologyTable`). Use
+Enable or disable a `MeshTopology` table on `mesh` (`Internals.EnableTopologyTable`). Use
 `"parentedges"` / `"parentfaces"` **before** refinement if you need
 [`parent_edges`](@ref) / [`parent_faces`](@ref); parent maps are off by default.
 """
 enable_topology_table!(m, name::AbstractString, set::Bool=true) =
-    EnableTopologyTable(m, String(name), set)
+    Internals.EnableTopologyTable(m, String(name), set)
 
 # --- parent edge / face maps (after refinement) -----------------------------
 
 """
     has_parent_edges(mesh) -> Bool
 
-Whether parent-edge maps are configured (`MeshTopology::HasParentEdges`). This
+Whether parent-edge maps are configured (`MeshTopology::Internals.HasParentEdges`). This
 is `false` on a fresh mesh until you call
 [`enable_topology_table!`](@ref)(mesh, "parentedges") and refine.
 """
-has_parent_edges(m) = HasParentEdges(_ngx(m))
+has_parent_edges(m) = Internals.HasParentEdges(_ngx(m))
 
 """
     parent_edges(mesh, enr) -> (info, e1, e2, e3)
@@ -138,7 +138,7 @@ returned by the binding). Requires [`has_parent_edges`](@ref)(mesh).
 function parent_edges(m, enr::Integer)
     has_parent_edges(m) || throw(ArgumentError(
         "parent_edges requires parent-edge maps; refine the mesh first"))
-    info, e1, e2, e3 = GetParentEdges(_ngx(m), Int(enr) - 1)
+    info, e1, e2, e3 = Internals.GetParentEdges(_ngx(m), Int(enr) - 1)
     return Int(info), Int(e1), Int(e2), Int(e3)
 end
 
@@ -150,7 +150,7 @@ Parent-face data for face `fnr` (1-based topology face index).
 function parent_faces(m, fnr::Integer)
     has_parent_edges(m) || throw(ArgumentError(
         "parent_faces requires parent topology; refine the mesh first"))
-    info, f1, f2, f3, f4 = GetParentFaces(_ngx(m), Int(fnr) - 1)
+    info, f1, f2, f3, f4 = Internals.GetParentFaces(_ngx(m), Int(fnr) - 1)
     return Int(info), Int(f1), Int(f2), Int(f3), Int(f4)
 end
 
@@ -158,12 +158,12 @@ end
     face_edges(mesh, fnr) -> Vector{Int}
 
 Edge indices bounding topology face `fnr` (1-based, `1:GetNFaces(GetTopology(mesh))`).
-Uses `Ngx_Mesh::GetFaceEdges`. Call [`Netgen.UpdateTopology`](@ref) after mesh
+Uses `Ngx_Mesh::GetFaceEdges`. Call [`Internals.UpdateTopology`](@ref) after mesh
 changes if results look stale.
 """
 function face_edges(m, fnr::Integer)
     buf = zeros(Cint, 8)
-    n = GetFaceEdges(_ngx(m), Int(fnr) - 1, buf)
+    n = Internals.GetFaceEdges(_ngx(m), Int(fnr) - 1, buf)
     return Int.(buf[1:n])
 end
 
@@ -177,12 +177,12 @@ pair are **1-based** (converted from Netgen's 0-based Ngx output). Returns an
 empty vector when no pairs exist.
 """
 function periodic_vertex_pairs(m, idnr::Integer=1)
-    n_id = GetNIdentifications(_ngx(m))
+    n_id = Internals.GetNIdentifications(_ngx(m))
     n_id == 0 && return Tuple{Int,Int}[]
     (1 <= idnr <= n_id) ||
         throw(ArgumentError("identification $idnr out of range (1:$n_id)"))
-    buf = zeros(Cint, 2 * max(GetNP(m), 1))
-    n = GetPeriodicVertices(_ngx(m), idnr - 1, buf)
+    buf = zeros(Cint, 2 * max(Internals.GetNP(m), 1))
+    n = Internals.GetPeriodicVertices(_ngx(m), idnr - 1, buf)
     n == 0 && return Tuple{Int,Int}[]
     return [(Int(buf[2 * k - 1]) + 1, Int(buf[2 * k]) + 1) for k in 1:n]
 end
@@ -207,23 +207,23 @@ function find_element(m, x::AbstractVector{<:Real};
                       build_searchtree::Bool=false,
                       hint::Union{Nothing,Integer}=nothing,
                       tol::Real=1e-4)
-    d = Int(GetDimension(m))
+    d = Int(Internals.GetDimension(m))
     nm = _ngx(m)
     p = collect(Float64, x)
     hints = hint === nothing ? Cint[] : Cint[Int(hint) - 1]
     if d == 3
         length(p) >= 3 || throw(ArgumentError("x must have length ≥ 3 for a 3D mesh"))
-        elnr, l1, l2, l3, l4 = FindElementOfPoint3(nm, p, build_searchtree, hints, Float64(tol))
+        elnr, l1, l2, l3, l4 = Internals.FindElementOfPoint3(nm, p, build_searchtree, hints, Float64(tol))
         elnr < 0 && return nothing
         return Int(elnr) + 1, Float64[l1, l2, l3, l4]
     elseif d == 2
         length(p) >= 2 || throw(ArgumentError("x must have length ≥ 2 for a 2D mesh"))
-        elnr, l1, l2 = FindElementOfPoint2(nm, p, build_searchtree, hints, Float64(tol))
+        elnr, l1, l2 = Internals.FindElementOfPoint2(nm, p, build_searchtree, hints, Float64(tol))
         elnr < 0 && return nothing
         return Int(elnr) + 1, Float64[l1, l2]
     elseif d == 1
         length(p) >= 1 || throw(ArgumentError("x must have length ≥ 1"))
-        elnr, l1 = FindElementOfPoint1(nm, p, build_searchtree, hints, Float64(tol))
+        elnr, l1 = Internals.FindElementOfPoint1(nm, p, build_searchtree, hints, Float64(tol))
         elnr < 0 && return nothing
         return Int(elnr) + 1, Float64[l1]
     else
@@ -238,7 +238,7 @@ end
 
 Local mesh size `h` at mesh node `pi` (1-based), via `Mesh::GetH(PointIndex)`.
 """
-mesh_h_at_point(m, pi::Integer) = GetHPointIndex(m, Int(pi))
+mesh_h_at_point(m, pi::Integer) = Internals.GetHPointIndex(m, Int(pi))
 
 
 """
@@ -260,13 +260,13 @@ function material_codim_name(m, codim::Integer, region_nr::Integer)
     nm = _ngx(m)
     r0 = Int(region_nr) - 1
     name = if codim == 0
-        GetMaterialCD0(nm, r0)
+        Internals.GetMaterialCD0(nm, r0)
     elseif codim == 1
-        GetMaterialCD1(nm, r0)
+        Internals.GetMaterialCD1(nm, r0)
     elseif codim == 2
-        GetMaterialCD2(nm, r0)
+        Internals.GetMaterialCD2(nm, r0)
     elseif codim == 3
-        GetMaterialCD3(nm, r0)
+        Internals.GetMaterialCD3(nm, r0)
     else
         throw(ArgumentError("codim must be 0–3 (got $codim)"))
     end

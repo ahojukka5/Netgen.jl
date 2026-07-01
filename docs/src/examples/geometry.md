@@ -1,12 +1,12 @@
 # Building geometry
 
-Netgen.jl accepts geometry from files, 2D constructive solid geometry (CSG), or
+Delone.jl accepts geometry from files, 2D constructive solid geometry (CSG), or
 shapes built in [OpenCascade.jl](https://github.com/) and passed via BREP strings.
 
 ## Import CAD files
 
 ```julia
-using Netgen
+using Delone
 
 geom = load_step("model.step")       # also load_iges, load_brep
 geom = load_geometry("part.brep")    # extension dispatch
@@ -24,7 +24,7 @@ stl_geom = load_stl("surface.stl")
 boundary label:
 
 ```julia
-using Netgen
+using Delone
 
 # Unit disk (radius 1), curved boundary
 disk = Circle(0.0, 0.0, 1.0, "disk", "outer")
@@ -43,30 +43,30 @@ Boolean operators match Netgen's CSG conventions (`+` union, `*` intersection,
 
 ## 3D modeling with OpenCascade.jl
 
-CAD modeling lives in **OpenCascade.jl** (not Netgen). Build a shape there, then
+CAD modeling lives in **OpenCascade.jl** (not Delone). Build a shape there, then
 import via the in-memory BREP boundary:
 
 ```julia
-using OpenCascade, Netgen
+using OpenCascade, Delone
 
-shape = cylinder(1.0, 2.0)
-geom  = occ_geometry_from_brep_string(to_brep_string(shape))
-mesh  = generate_mesh(geom; maxh=0.3)
+body = cylinder(1.0, 2.0)
+geom = occ_geometry_from_brep_string(to_brep_string(body))
+mesh = generate_mesh(geom; maxh=0.3)
 ```
 
 ### Booleans
 
 ```julia
 big   = box(2, 2, 2)
-small = sphere(0.6; center=gp_Pnt(1, 1, 1))
-cut   = cut(big, small)
-geom  = occ_geometry_from_brep_string(to_brep_string(cut))
+small = sphere(0.6; center=Point(1, 1, 1))
+result = subtract(big, small)
+geom   = occ_geometry_from_brep_string(to_brep_string(result))
 ```
 
 ### File export / Netgen file import
 
 ```julia
-write_brep(shape, "part.brep")
+write_brep(body, "part.brep")
 geom = load_brep("part.brep")
 ```
 

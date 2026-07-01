@@ -1,4 +1,4 @@
-# --- BREP interop (OpenCascade.jl → Netgen.jl) -------------------------------
+# --- BREP interop (OpenCascade.jl → Delone.jl) -------------------------------
 # Primary boundary: in-memory BREP strings. TopoDS_Shape stays in OpenCascade;
 # Netgen imports geometry via OCCGeometry_from_brep_string only.
 
@@ -10,4 +10,4 @@ Build a meshable Netgen `OCCGeometry` from an in-memory BREP string (from
 interop path between CAD modeling and Netgen meshing.
 """
 occ_geometry_from_brep_string(brep::AbstractString) =
-    OCCGeometry_from_brep_string(String(brep))
+    Internals.OCCGeometry_from_brep_string(String(brep))

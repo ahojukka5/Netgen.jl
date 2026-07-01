@@ -31,7 +31,7 @@ end
     enable_topology_table!(m, "parentedges")
     enable_topology_table!(m, "parentfaces")
     refine!(m)
-    Netgen.UpdateTopology(m)
+    I.UpdateTopology(m)
     @test has_parent_edges(m)
     info, e1, e2, e3 = parent_edges(m, 1)
     @test info isa Int && e1 isa Int && e2 isa Int && e3 isa Int
@@ -68,7 +68,7 @@ end
     hit = find_element(m, cen)
     @test hit !== nothing
     el, lami = hit
-    @test el isa Int && el >= 1 && el <= Netgen.GetNE(m)
+    @test el isa Int && el >= 1 && el <= I.GetNE(m)
     @test length(lami) == 4
     # centroid of a linear tet: all barycentric weights positive
     @test all(lami .> -1e-6)
@@ -83,7 +83,7 @@ end
     hit = find_element(m, cen[1:2])
     @test hit !== nothing
     el, lami = hit
-    @test 1 <= el <= Netgen.GetNSE(m)
+    @test 1 <= el <= I.GetNSE(m)
     @test length(lami) == 2
 end
 
@@ -98,7 +98,7 @@ end
     m = generate_mesh(geom; maxh=40.0)
     X = points(m)
     h_idx = mesh_h_at_point(m, 1)
-    h_pt = Netgen.GetH(m, Netgen.Point3d(X[1, 1], X[2, 1], X[3, 1]))
+    h_pt = I.GetH(m, I.Point3d(X[1, 1], X[2, 1], X[3, 1]))
     @test h_idx > 0
     @test isapprox(h_idx, h_pt; rtol=1e-12)
 end

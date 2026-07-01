@@ -1,27 +1,66 @@
-# Netgen.jl
+# Delone.jl
 
-A **CxxWrap-based Julia binding for the exported C++ API of NGSolve/Netgen**,
-plus a thin Julia layer for building geometry-backed, refinable mesh hierarchies.
+**Delone.jl** is a high-level, LLM-friendly meshing, refinement, mesh-diagnostics,
+and mesh-hierarchy package for numerical simulation workflows. It is built on
+top of [**Netgen/NGSolve**](https://ngsolve.org/), a mature and powerful
+open-source meshing technology — Delone.jl does not try to replace Netgen; it
+provides a Julian, simulation-oriented, agent-friendly layer above it.
 
-The native bindings come from `NetgenCxxWrap_jll` (`libnetgen_cxxwrap`, a CxxWrap
-module that wraps Netgen's C++ API 1:1). This package loads it via
-`CxxWrap.@wrapmodule`/`@initcxx` and adds idiomatic helpers. Geometry can come
-from a CAD file (STEP/IGES/BREP), be built programmatically with OpenCASCADE
-(`OpenCascade.jl` + BREP interop), or be defined in 2D (`geom2d`/`csg2d`). Refinement is
-**geometry-aware**: new boundary nodes are projected onto the true curved
-surface.
+Geometry can come from a CAD file (STEP/IGES/BREP), be built programmatically
+with OpenCASCADE (`OpenCascade.jl` + BREP interop), or be defined in 2D
+(`geom2d`/`csg2d`). Refinement is **geometry-aware**: new boundary nodes are
+projected onto the true curved surface.
 
 > Transfer operators for geometric multigrid are **not** built here — this
 > package exposes the meshes and the topological coarse→fine **mapping**
 > (`parent_nodes` / `prolongation`); assembling prolongation/restriction
 > operators is left to the consumer.
 
+## Why Delone?
+
+Delone.jl is named after **Boris Delone** (Delaunay), whose empty-sphere
+construction became one of the foundations of Delaunay triangulation, spatial
+tessellation, and modern quality mesh generation. Delone.jl continues that
+tradition for agentic numerical simulation workflows: meshes should be
+constructible, measurable, diagnosable, refinable, hierarchy-aware, and ready
+for computation — not just a handle returned from a black-box mesher.
+
+LLM-friendliness is a core architecture principle here, not a UI layer. See
+[`AGENTS.md`](AGENTS.md) for the introspection contract (`report`, `validate`,
+`readiness`, …) that Delone's public objects are expected to support.
+
+## Netgen/NGSolve backend
+
+Delone.jl stands on the shoulders of **Netgen/NGSolve**, a mature open-source
+meshing technology. The goal of Delone.jl is not to replace Netgen, but to
+provide a clean Julia API and structured feedback layer for simulation-oriented
+meshing workflows. Advanced users and backend developers can access low-level
+Netgen/NGSolve bindings and backend structures through **`Delone.Internals`**;
+most users and LLM agents should use the high-level `Delone` API and never need
+to touch `Internals` directly.
+
+## The Monge → Delone → Oodi pipeline
+
+Delone.jl is the meshing stage of the Oodi ecosystem's numerical simulation
+pipeline:
+
+```
+Monge.jl    semantic CAD / constructive geometry
+Delone.jl   meshing, mesh diagnostics, mesh hierarchies   (this package)
+Oodi.jl     LLM-native numerical framework
+```
+
+Monge creates and understands geometric form; Delone discretizes that geometry
+into simulation-ready meshes and hierarchies; Oodi builds, solves, diagnoses,
+and explains the numerical model.
+
 ## Stack
 
 ```
 NGSolveNetgen_jll   upstream NGSolve/Netgen binary (+ OpenCASCADE)
 NetgenCxxWrap_jll   libnetgen_cxxwrap: boring 1:1 CxxWrap wrapper of Netgen's C++ API
-Netgen.jl           this package — Julian conveniences + hierarchy/mapping helpers
+Delone.jl           this package — Julian, LLM-friendly meshing/hierarchy/diagnostics API
+  └── Delone.Internals   the raw NetgenCxxWrap_jll bindings, re-exposed for advanced/backend use
 ```
 
 ## Documentation
@@ -44,7 +83,7 @@ circle, and `parent_nodes` tells us, for every fine node, which two coarse nodes
 it came from — the topological link between the two meshes.
 
 ```julia
-using Netgen
+using Delone
 
 # A unit disk (radius 1) built programmatically; its boundary is a true circle.
 disk = Circle(0.0, 0.0, 1.0, "disk", "boundary")
@@ -99,11 +138,11 @@ so `parent_nodes` is all that is needed to relate the two meshes.
 
 ```julia
 # CAD files
-geom = load_step("model.step")          # also load_brep / load_iges
-geom = load_geometry("model.brep")      # dispatch on extension
+geom = load_step("model.step")          # also load_brep / load_iges / load_stl
+geom = load_geometry("model.brep")      # dispatch on extension (.step/.brep/.iges/.stl)
 
 # 3D CAD modeling via OpenCascade.jl (separate package), then BREP interop:
-using OpenCascade, Netgen
+using OpenCascade, Delone
 shape = cut(box(2, 2, 2), sphere(0.6; center=gp_Pnt(1, 1, 1)))
 geom  = occ_geometry_from_brep_string(to_brep_string(shape))
 
@@ -116,19 +155,67 @@ geom  = geometry2d(plate - hole)        # plate with a circular hole
 ## Mesh access and refinement
 
 ```julia
-mesh = generate_mesh(geom; maxh=0.2)
+mesh = generate_mesh(geom; maxh=0.2, minh=0.01, grading=0.3)
 
 points(mesh)             # dim×np Matrix{Float64}
 tetrahedra(mesh)         # 4×ne Matrix{Int32}, 1-based (3D volume meshes)
 surface_triangles(mesh)  # 3×nse Matrix{Int32}, 1-based (boundary / 2D meshes)
 
+num_nodes(mesh); num_cells(mesh); mesh_dimension(mesh)
+connectivity(mesh)       # (volume, surface) matrices by dimension
+
+save_mesh(mesh, "out.vol")
+mesh2 = load_mesh("out.vol")
+update_topology!(mesh)   # refresh edge/face tables after mesh changes
+check_mesh(mesh)         # (volume_ok=..., boundary_ok=...)
+optimize_volume!(mesh; maxh=0.2)
+
 refine!(mesh)                                   # uniform, geometry-aware, in place
 mark_for_refinement!(mesh, marked); bisect!(mesh)  # adaptive, element-wise
 
-# Material / boundary labels (Element/Element2d GetIndex -> name)
-Netgen.GetMaterial(mesh, 1)
-Netgen.GetBCName(mesh, 1)
+# Material / boundary labels (Julian helpers)
+material_names(mesh)
+boundary_names(mesh)
+cell_regions(mesh)
 ```
+
+The **exported API is Julian** (`load_step`, `generate_mesh`, `save_mesh`,
+`update_topology!`, `refine!`, …). Strict 1:1 Netgen/NGSolve C++ bindings live in
+**`Delone.Internals`** for advanced/backend use (`Delone.Internals.GetNP`, …) but
+are not re-exported from the top-level module. Most users and LLM agents should
+never need `Internals`.
+
+## Structured reports & diagnostics
+
+Alongside the mesh/geometry API, Delone.jl exposes a **read-only reporting
+layer** — structured, serializable results for validation, quality,
+meshability, and readiness checks, so a calling tool, solver driver, or LLM
+agent can inspect *what happened* and *what to do next* without touching raw
+`Delone.Internals` handles:
+
+```julia
+opts = MeshOptions(maxh=2.0, minh=0.1, grading=0.3)
+result = generate_mesh(geom; options=opts, result=true)   # MeshGenerationResult
+
+if !result.success
+    println(result.diagnostics)
+    error("meshing failed")
+end
+
+r = mesh_report(mesh(result))     # MeshReport: validation + quality + topology + tags
+r.validation.valid
+r.quality.min_quality
+
+h = mesh_hierarchy(geom; maxh=0.5, levels=1)
+refine!(h; mode=:uniform)
+hr = hierarchy_report(h)          # MeshHierarchyReport
+hr.nlevels
+```
+
+See [Structured reports & introspection](docs/src/examples/introspection.md) for
+the full `report`/`validate`/`readiness`/`to_namedtuple` contract (shared with
+the rest of the Oodi ecosystem via `OodiCore.jl`), and [`AGENTS.md`](AGENTS.md)
+for the design principle behind it.
 
 ## Mesh hierarchy
 
@@ -149,13 +236,9 @@ prolongation(h, k)                      # 2×np mapping from level k-1 to level 
 h = uniform_hierarchy(geom; maxh=0.5, levels=4)
 ```
 
-Wrapped Netgen names are available directly (`Netgen.GetNP`, `Netgen.GetNE`,
-`Netgen.UpdateTopology`, `Netgen.GetTopology`, `Netgen.Refinement`,
-`Netgen.MeshingParameters`, …); the exported Julian layer composes them.
-
 ## Live session + snapshots (consumer integration contract)
 
-Netgen.jl exposes the geometry-backed mesh hierarchy as a **live session** — the
+Delone.jl exposes the geometry-backed mesh hierarchy as a **live session** — the
 authoritative state a solver keeps during a simulation — plus **copied
 snapshots** for consumers. The two are distinct on purpose: the live Netgen mesh
 handles are authoritative; snapshots are derived copies.
@@ -193,7 +276,7 @@ directly and keep generation tracking correct, use the callback helper:
 
 ```julia
 mutate_level_mesh!(s, 2) do m       # bump_generation=true by default
-    Netgen.Compress(m)              # any in-place mesh mutation
+    # in-place mesh mutation via Delone.Internals if needed
 end                                  # -> returns the session; generation bumped
 ```
 
@@ -315,8 +398,8 @@ parent_edges(mesh, enr); parent_faces(mesh, fnr); face_edges(mesh, fnr)
 
 ### hp-adaptivity (read + apply)
 
-Netgen.jl exposes both **reading** and **applying** hp/p metadata through strict
-1:1 `Ngx_Mesh` bindings. Netgen.jl does **not** implement an hp-adaptive solve
+Delone.jl exposes both **reading** and **applying** hp/p metadata through strict
+1:1 `Ngx_Mesh` bindings. Delone.jl does **not** implement an hp-adaptive solve
 strategy — consumers own marking policies, error estimators, and solvers.
 
 **Read** (query current state):
@@ -363,7 +446,7 @@ In-place hp/p operations **invalidate** snapshots of the finest level (same as
 ### Integration contract
 
 ```
-Netgen.jl owns   geometry-backed mesh hierarchy handles, refinement requests,
+Delone.jl owns   geometry-backed mesh hierarchy handles, refinement requests,
                  parent maps, stable ids, region/tag + hp-readiness data,
                  and copied snapshots.
 Consumer owns    FE spaces, DOF numbering, matrix-free operators, error
@@ -374,7 +457,7 @@ Consumer owns    FE spaces, DOF numbering, matrix-free operators, error
 ### Partitioning responsibility
 
 ```
-Netgen.jl provides   geometry-backed mesh levels, parent maps, stable ids,
+Delone.jl provides   geometry-backed mesh levels, parent maps, stable ids,
                      region/tag data, and optional raw partition hints if
                      available (native_partition_hint(mesh)).
 Consumer provides    PartitionGraph, cell/edge weights, METIS/ParMETIS backend
@@ -382,7 +465,7 @@ Consumer provides    PartitionGraph, cell/edge weights, METIS/ParMETIS backend
                      ghost/halo construction, dynamic repartitioning + migration.
 ```
 
-Netgen.jl does **not** call METIS/ParMETIS and does **not** own partition policy.
+Delone.jl does **not** call METIS/ParMETIS and does **not** own partition policy.
 `native_partition_hint(mesh)` wraps `GetGlobalVertexNum` / `GetDistantProcs`: on
 the current serial build, `global_vertex_ids` is the identity `1:np` and each
 `distant_procs[i]` is empty; on an MPI-enabled build these become true global
@@ -394,8 +477,9 @@ Wrapped and tested locally: module load + value types, mesh core + extraction,
 OCC file import (STEP/IGES/BREP via nglib), BREP interop with OpenCascade.jl,
 2D geom2d/csg2d (circle/rectangle + boolean CSG), geometry-aware uniform **and**
 adaptive (marked-bisection) refinement, second-order curving, material/BC labels,
-the `Ngx_Mesh` multigrid hierarchy (levels + parent maps), mesh copy, and nested
-hierarchies. OCCT modeling bindings live in OpenCascade.jl / OpenCascadeCxxWrap_jll.
+the `Ngx_Mesh` multigrid hierarchy (levels + parent maps), mesh copy, nested
+hierarchies, and the structured `report`/`validate`/`readiness` diagnostics
+layer. OCCT modeling bindings live in OpenCascade.jl / OpenCascadeCxxWrap_jll.
 See `OpenCascadeCxxWrap_jll/README.md` for the split boundary.
 
 ## Development
@@ -404,9 +488,9 @@ See `OpenCascadeCxxWrap_jll/README.md` for the split boundary.
 and bound via `Artifacts.toml`:
 
 ```
-julia --project=Netgen.jl Netgen.jl/gen/build_local.jl
+julia --project=Delone.jl Delone.jl/gen/build_local.jl
 ```
 
 This compiles `libnetgen_cxxwrap` against the locally-bound NGSolveNetgen
 artifact + OCCT_jll + the CxxWrap/JlCxx prefix (this platform only). Then
-`pkg> test Netgen`.
+`pkg> test Delone`.

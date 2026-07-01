@@ -1,6 +1,6 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-Netgen = "0a3734f8-1dfd-4ffb-90f2-cbaa38dcac37"
+Delone = "0a3734f8-1dfd-4ffb-90f2-cbaa38dcac37"
 
 [compat]
 Documenter = "1"

@@ -7,7 +7,7 @@
 # The snapshot contract targets pure simplex meshes:
 #   3D: tetrahedral volume elements (Tet4/Tet10) + triangular boundary facets;
 #   2D: triangular domain elements + segment boundary facets.
-# GetNV counts corner vertices, so it is 4 (tet) / 3 (triangle) for both linear
+# Internals.GetNV counts corner vertices, so it is 4 (tet) / 3 (triangle) for both linear
 # and curved (second-order) simplices — curved meshes are still supported.
 
 """
@@ -16,25 +16,25 @@
 `true` if `mesh` is a topology [`level_snapshot`](@ref) supports: a pure
 tetrahedral (Tri3-bounded) 3D mesh, or a pure triangular (Segment-bounded) 2D
 mesh. Curved second-order simplices count as supported (a Tet10 is still a
-tetrahedron, `GetNV == 4`). Returns `false` for mixed/non-simplex meshes and
+tetrahedron, `Internals.GetNV == 4`). Returns `false` for mixed/non-simplex meshes and
 unsupported dimensions.
 """
 function supported_snapshot_topology(m)
-    d = Int(GetDimension(m))
+    d = Int(Internals.GetDimension(m))
     if d == 3
-        for i in 1:GetNE(m)
-            GetNV(VolumeElement(m, i)) == 4 || return false
+        for i in 1:Internals.GetNE(m)
+            Internals.GetNV(Internals.VolumeElement(m, i)) == 4 || return false
         end
-        for i in 1:GetNSE(m)
-            GetNV(SurfaceElement(m, i)) == 3 || return false
+        for i in 1:Internals.GetNSE(m)
+            Internals.GetNV(Internals.SurfaceElement(m, i)) == 3 || return false
         end
         return true
     elseif d == 2
-        for i in 1:GetNSE(m)
-            GetNV(SurfaceElement(m, i)) == 3 || return false
+        for i in 1:Internals.GetNSE(m)
+            Internals.GetNV(Internals.SurfaceElement(m, i)) == 3 || return false
         end
-        for i in 1:GetNSeg(m)
-            GetNP(LineSegment(m, i)) >= 2 || return false
+        for i in 1:Internals.GetNSeg(m)
+            Internals.GetNP(Internals.LineSegment(m, i)) >= 2 || return false
         end
         return true
     else
@@ -44,7 +44,7 @@ end
 
 # Throwing guard used by the snapshot constructors.
 function _assert_supported_snapshot_topology(m)
-    d = Int(GetDimension(m))
+    d = Int(Internals.GetDimension(m))
     d in (2, 3) || throw(ArgumentError(
         "MeshLevelSnapshot currently supports pure Tet4/Tri3 3D meshes and pure " *
         "Tri3/Segment 2D meshes; found unsupported mesh dimension $d"))
@@ -160,7 +160,7 @@ function level_snapshot(s::MeshHierarchySession, k::Integer)
         throw(ArgumentError("level $k out of range 1:$(nlevels(s))"))
     m = s.meshes[k]
     _assert_supported_snapshot_topology(m)
-    dim = Int(GetDimension(m))
+    dim = Int(Internals.GetDimension(m))
     X = points(m)                       # 3×np (Netgen stores 3 coords)
     coords = Matrix{Float64}(X[1:dim, :])
     if dim == 3

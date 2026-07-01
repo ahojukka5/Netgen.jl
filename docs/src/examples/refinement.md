@@ -1,6 +1,6 @@
 # Refinement
 
-Netgen.jl supports **uniform**, **marked adaptive**, and **second-order**
+Delone.jl supports **uniform**, **marked adaptive**, and **second-order**
 refinement. All h-refinement paths are **geometry-aware**: new boundary nodes are
 projected onto the true curved boundary (circle, sphere, CAD face), not placed at
 chord midpoints.
@@ -8,14 +8,14 @@ chord midpoints.
 ## Uniform refinement
 
 ```julia
-using Netgen
+using Delone
 
 geom = geometry2d(Circle(0.0, 0.0, 1.0, "d", "c"))
 mesh = generate_mesh(geom; maxh=0.4)
 
-ne0 = Netgen.GetNE(mesh)
+ne0 = Delone.Internals.GetNE(mesh)
 refine!(mesh)                    # in place
-Netgen.GetNE(mesh) > ne0         # more elements
+Delone.Internals.GetNE(mesh) > ne0         # more elements
 ```
 
 On a 3D sphere built with OCC, boundary vertices stay on the surface after
@@ -27,9 +27,9 @@ Mark elements, then bisect:
 
 ```julia
 mesh = generate_mesh(geom; maxh=0.4)
-Netgen.UpdateTopology(mesh)
+Delone.Internals.UpdateTopology(mesh)
 
-ne = Netgen.GetNE(mesh)
+ne = Delone.Internals.GetNE(mesh)
 marked = falses(ne)
 marked[1:ne÷4] .= true            # refine first quarter of elements
 
@@ -46,9 +46,9 @@ helpers wrap the common cases (see [Tags, hp-adaptivity & FEM data](@ref "Tags, 
 Add edge midpoints and curve them onto the geometry:
 
 ```julia
-np0 = Netgen.GetNP(mesh)
+np0 = Delone.Internals.GetNP(mesh)
 make_second_order!(mesh)
-Netgen.GetNP(mesh) > np0         # new midpoint nodes
+Delone.Internals.GetNP(mesh) > np0         # new midpoint nodes
 ```
 
 Second-order curving is **in-place** on the same mesh level: it does not append a

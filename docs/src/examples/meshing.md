@@ -6,7 +6,7 @@ Every mesh starts from a geometry object and a characteristic mesh size `maxh`
 (smaller → finer mesh):
 
 ```julia
-using Netgen
+using Delone
 
 disk = Circle(0.0, 0.0, 1.0, "disk", "boundary")
 mesh = generate_mesh(geometry2d(disk); maxh=0.4)
@@ -19,8 +19,19 @@ geom = load_step("frame.step")
 mesh = generate_mesh(geom; maxh=0.5)
 ```
 
-`generate_mesh` composes the 1:1 Netgen calls: `new_mesh`, `SetGeometry`,
-`MeshingParameters`, `GenerateMesh`.
+Optional meshing parameters are passed as keyword arguments to
+[`generate_mesh`](@ref) (via [`meshing_parameters`](@ref)):
+
+```julia
+mesh = generate_mesh(geom;
+    maxh=0.5,
+    minh=0.01,          # optional lower bound
+    grading=0.3,        # mesh grading between coarse and fine regions
+    secondorder=false,
+    optsteps2d=3,
+    optsteps3d=3,
+)
+```
 
 ## Reading mesh data
 
@@ -36,38 +47,45 @@ F = surface_triangles(mesh)       # 3×nse boundary triangles
 # 2D domain mesh
 Tr = triangles2d(mesh)            # domain triangles
 S  = segments2d(mesh)             # boundary segments
+
+# counts and combined connectivity
+num_nodes(mesh); num_cells(mesh); mesh_dimension(mesh)
+vol, surf = connectivity(mesh)
 ```
 
-Raw accessors remain available: `GetNP`, `GetNE`, `Point(mesh, i)`,
-`VolumeElement(mesh, i)`, etc.
+For low-level access, use [`Delone.Internals`](@ref) (`GetNP`, `Point(mesh, i)`,
+`VolumeElement(mesh, i)`, …).
+
+## Mesh I/O
+
+Save and reload Netgen volume format without touching Internals:
+
+```julia
+save_mesh(mesh, "out.vol")
+mesh2 = load_mesh("out.vol")
+```
 
 ## Mesh parameters
 
-For finer control, build `MeshingParameters` directly:
+For reuse across generate / improve / optimize steps, build parameters explicitly:
 
 ```julia
-mp = MeshingParameters()
-maxh!(mp, 0.2)
-minh!(mp, 0.01)          # optional lower bound
-grading!(mp, 0.3)        # mesh grading between coarse and fine regions
-
-m = new_mesh()
-SetGeometry(m, geom)
-GenerateMesh(geom, m, mp)
+mp = meshing_parameters(maxh=0.2, minh=0.01, grading=0.3)
 ```
 
-Set `secondorder!(mp, true)` before generation if you want second-order elements
-from the mesher (alternative: `make_second_order!` after the fact — see [Refinement](@ref "Refinement")).
+Set `secondorder=true` before generation if you want second-order elements from
+the mesher (alternative: [`make_second_order!`](@ref) after the fact — see
+[Refinement](@ref "Refinement")).
 
 ## Topology
 
 After mesh changes, refresh topology tables:
 
 ```julia
-Netgen.UpdateTopology(mesh)
-topo = Netgen.GetTopology(mesh)
-Netgen.GetNEdges(topo)
-Netgen.GetNFaces(topo)
+update_topology!(mesh)
+topo = Delone.Internals.GetTopology(mesh)
+Delone.Internals.GetNEdges(topo)
+Delone.Internals.GetNFaces(topo)
 ```
 
 Enable optional parent-edge tables before refinement (see
@@ -78,9 +96,19 @@ enable_topology_table!(mesh, "parentedges")
 enable_topology_table!(mesh, "parentfaces")
 ```
 
+## Quality checks
+
+```julia
+check_mesh(mesh)                    # (volume_ok=..., boundary_ok=...)
+optimize_volume!(mesh; maxh=0.5)   # returns MESHING3_OK (see exported constants)
+improve_mesh!(mesh; maxh=0.5)
+(lo, hi) = mesh_bounding_box(mesh)
+compress!(mesh)
+```
+
 ## Copying meshes
 
-`copy_mesh` (C++ `Mesh.assign`) duplicates a mesh so you can refine one level
+[`copy_mesh`](@ref) (C++ `Mesh.assign`) duplicates a mesh so you can refine one level
 without destroying another:
 
 ```julia
@@ -95,7 +123,7 @@ This pattern underlies multigrid hierarchies — see
 ## STL surfaces
 
 ```julia
-stl = load_stl("scan.stl")
+stl = load_stl("scan.stl")           # or load_geometry("scan.stl")
 mesh = generate_mesh(stl; maxh=1.0)   # surface triangle mesh
 ```
 

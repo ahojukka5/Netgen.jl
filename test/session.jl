@@ -9,26 +9,26 @@
     @test geometry(s) === geom
     @test level_mesh(s, 1) === coarsest(s) === finest(s)
     @test s.metadata[:maxh] == 40.0
-    @test Netgen.GetNP(finest(s)) > 0
+    @test I.GetNP(finest(s)) > 0
 end
 
 @testset "request_uniform_refinement! appends a level & bumps generation" begin
     geom = load_step(STEP)
     s = mesh_session(geom; maxh=40.0)
-    ne0 = Netgen.GetNE(finest(s))
+    ne0 = I.GetNE(finest(s))
     g0 = generation(s)
     request_uniform_refinement!(s)
     @test nlevels(s) == 2
     @test generation(s) == g0 + 1
-    @test Netgen.GetNE(finest(s)) > ne0
+    @test I.GetNE(finest(s)) > ne0
     # previous level preserved and untouched
-    @test Netgen.GetNE(level_mesh(s, 1)) == ne0
+    @test I.GetNE(level_mesh(s, 1)) == ne0
 end
 
 @testset "request_marked_refinement! appends a level and grows the mesh" begin
     geom = load_step(STEP)
     s = mesh_session(geom; maxh=40.0)
-    m = finest(s); ne = Netgen.GetNE(m)
+    m = finest(s); ne = I.GetNE(m)
     X = points(m); T = tetrahedra(m)
     cx = [sum(X[1, T[:, e]]) / 4 for e in 1:ne]
     marked = cx .< sort(cx)[ne ÷ 3]
@@ -36,7 +36,7 @@ end
     request_marked_refinement!(s, marked)
     @test nlevels(s) == 2
     @test generation(s) == g0 + 1
-    @test Netgen.GetNE(finest(s)) > ne
+    @test I.GetNE(finest(s)) > ne
 end
 
 @testset "level_mesh returns a live Netgen mesh handle" begin
@@ -45,12 +45,12 @@ end
     request_uniform_refinement!(s)
     m1 = level_mesh(s, 1)
     m2 = level_mesh(s, 2)
-    @test Netgen.GetDimension(m1) == 3
-    @test Netgen.GetNP(m2) > Netgen.GetNP(m1)
+    @test I.GetDimension(m1) == 3
+    @test I.GetNP(m2) > I.GetNP(m1)
     # it is *the* live handle: refining it in place changes the session's level
-    ne = Netgen.GetNE(m2)
+    ne = I.GetNE(m2)
     refine!(m2)
-    @test Netgen.GetNE(level_mesh(s, 2)) > ne
+    @test I.GetNE(level_mesh(s, 2)) > ne
     @test_throws ArgumentError level_mesh(s, 3)
 end
 
@@ -69,28 +69,28 @@ end
     geom = load_step(STEP)
     s = mesh_session(geom; maxh=40.0)
     g0 = generation(s)
-    np0 = Netgen.GetNP(finest(s))
+    np0 = I.GetNP(finest(s))
     ret = mutate_level_mesh!(s, 1) do m
         make_second_order!(m)
     end
     @test ret === s                              # returns the session
     @test generation(s) == g0 + 1               # bumped by default
-    @test Netgen.GetNP(finest(s)) > np0
+    @test I.GetNP(finest(s)) > np0
     # bump_generation=false leaves generation unchanged
     g1 = generation(s)
-    mutate_level_mesh!(m -> Netgen.Compress(m), s, 1; bump_generation=false)
+    mutate_level_mesh!(m -> I.Compress(m), s, 1; bump_generation=false)
     @test generation(s) == g1
 end
 
 @testset "request_second_order! curves the finest mesh in place (no new level)" begin
     geom = load_step(STEP)
     s = mesh_session(geom; maxh=40.0)
-    np0 = Netgen.GetNP(finest(s))
+    np0 = I.GetNP(finest(s))
     g0 = generation(s)
     request_second_order!(s)
     @test nlevels(s) == 1                       # documented: in place, no new level
     @test generation(s) == g0 + 1
-    @test Netgen.GetNP(finest(s)) > np0         # edge-midpoint nodes added
+    @test I.GetNP(finest(s)) > np0         # edge-midpoint nodes added
     @test s.metadata[:curved_order] == 2
     @test_throws ArgumentError request_second_order!(s; order=3)
 end
@@ -105,7 +105,7 @@ end
     request_second_order!(s)
     @test generation(s) == g0 + 1               # generation changed
     @test snap.generation != generation(s)      # old snapshot is now stale
-    @test Netgen.GetNP(finest(s)) > np_before   # node count changed
+    @test I.GetNP(finest(s)) > np_before   # node count changed
     # re-snapshotting the same level works and is fresh again (curved simplices ok)
     snap2 = level_snapshot(s, 1)
     @test snap2.generation == generation(s)
@@ -121,16 +121,16 @@ end
     snap = level_snapshot(s, 2)
     m = level_mesh(s, 2)
     @test snap isa MeshLevelSnapshot{3}
-    @test size(snap.coordinates) == (3, Netgen.GetNP(m))
-    @test size(snap.volume_connectivity) == (4, Netgen.GetNE(m))
-    @test size(snap.surface_connectivity) == (3, Netgen.GetNSE(m))
-    @test length(snap.cell_regions) == Netgen.GetNE(m)
-    @test length(snap.boundary_regions) == Netgen.GetNSE(m)
+    @test size(snap.coordinates) == (3, I.GetNP(m))
+    @test size(snap.volume_connectivity) == (4, I.GetNE(m))
+    @test size(snap.surface_connectivity) == (3, I.GetNSE(m))
+    @test length(snap.cell_regions) == I.GetNE(m)
+    @test length(snap.boundary_regions) == I.GetNSE(m)
     @test snap.element_type == :tet
     @test snap.boundary_element_type == :tri
     @test snap.level == 2
     @test snap.generation == generation(s)
-    @test all(1 .<= snap.volume_connectivity .<= Netgen.GetNP(m))
+    @test all(1 .<= snap.volume_connectivity .<= I.GetNP(m))
     # snapshot is a copy — mutating it does not touch the live mesh
     snap.coordinates[1, 1] = -999.0
     @test points(level_mesh(s, 2))[1, 1] != -999.0
@@ -144,9 +144,9 @@ end
     t = transfer_snapshot(s, 2)
     @test t isa HierarchyTransferSnapshot
     @test t.level_from == 1 && t.level_to == 2
-    @test size(t.parent_nodes) == (2, Netgen.GetNP(m))
-    @test length(t.parent_elements) == Netgen.GetNE(m)
-    @test length(t.parent_surface_elements) == Netgen.GetNSE(m)
+    @test size(t.parent_nodes) == (2, I.GetNP(m))
+    @test length(t.parent_elements) == I.GetNE(m)
+    @test length(t.parent_surface_elements) == I.GetNSE(m)
     @test t.weights === nothing
     # explicit weight semantics: nothing => topological bisection fallback
     @test t.weight_semantics == :topological_bisection_default
@@ -166,10 +166,10 @@ end
     # non-simplex mesh is not feasible through the current wrappers — no arbitrary
     # Element/Element2d constructors — so the guard's rejection path is exercised
     # through the dimension branch, which shares the same ArgumentError).
-    bad = Netgen.new_mesh()
-    Netgen.SetDimension(bad, 1)
+    bad = I.new_mesh()
+    I.SetDimension(bad, 1)
     @test supported_snapshot_topology(bad) == false
-    s_bad = Netgen.MeshHierarchySession(geom, Any[bad], 0, Dict{Symbol,Any}())
+    s_bad = Delone.MeshHierarchySession(geom, Any[bad], 0, Dict{Symbol,Any}())
     @test_throws ArgumentError level_snapshot(s_bad, 1)
 end
 
@@ -197,10 +197,10 @@ end
     radius(p) = sqrt(p[1]^2 + p[2]^2)
     geom = load_brep(CYLINDER)
     s = mesh_session(geom; maxh=0.5)
-    m0 = finest(s); np0 = Netgen.GetNP(m0); X0 = points(m0)
+    m0 = finest(s); np0 = I.GetNP(m0); X0 = points(m0)
     lateral0 = Set(j for j in 1:np0 if abs(radius(X0[:, j]) - 1) < 1e-9)
     request_uniform_refinement!(s)
-    m1 = finest(s); np1 = Netgen.GetNP(m1); X1 = points(m1)
+    m1 = finest(s); np1 = I.GetNP(m1); X1 = points(m1)
     P = parent_nodes(m1)
     newlat = [j for j in (np0 + 1):np1 if P[1, j] in lateral0 && P[2, j] in lateral0]
     @test !isempty(newlat)
@@ -230,12 +230,12 @@ end
 @testset "stable identity convention: marked refinement" begin
     geom = load_step(STEP)
     s = mesh_session(geom; maxh=40.0)
-    m = finest(s); ne = Netgen.GetNE(m)
+    m = finest(s); ne = I.GetNE(m)
     X = points(m); T = tetrahedra(m)
     cx = [sum(X[1, T[:, e]]) / 4 for e in 1:ne]
     marked = cx .< sort(cx)[ne ÷ 3]
     request_marked_refinement!(s, marked)
-    npc = Netgen.GetNP(level_mesh(s, 1))
+    npc = I.GetNP(level_mesh(s, 1))
     t = transfer_snapshot(s, 2)
     @test all(0 .<= t.parent_nodes .<= npc)
     @test count(j -> t.parent_nodes[1, j] == 0 && t.parent_nodes[2, j] == 0,
@@ -251,9 +251,9 @@ end
     m = finest(s)
     snap = level_snapshot(s, 1)
     @test snap isa MeshLevelSnapshot{2}
-    @test size(snap.coordinates) == (2, Netgen.GetNP(m))
-    @test size(snap.volume_connectivity) == (3, Netgen.GetNSE(m))
-    @test size(snap.surface_connectivity) == (2, Netgen.GetNSeg(m))
+    @test size(snap.coordinates) == (2, I.GetNP(m))
+    @test size(snap.volume_connectivity) == (3, I.GetNSE(m))
+    @test size(snap.surface_connectivity) == (2, I.GetNSeg(m))
     @test snap.element_type == :tri
     @test snap.boundary_element_type == :segment
 end

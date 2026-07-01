@@ -1,7 +1,8 @@
 # Not yet wrapped
 
-Netgen.jl deliberately wraps Netgen's **exported mesh/geometry API** and a
-**narrow OCCT modeling kernel**, not every symbol in the upstream trees.
+Delone.jl is built on Netgen's **exported mesh/geometry API** and a
+**narrow OCCT modeling kernel** (via `Delone.Internals`), not every symbol in
+the upstream trees.
 
 ## Netgen — missing or partial
 
@@ -68,7 +69,7 @@ Documented in `NetgenCxxWrap_jll/docs/WRAPPING_PLAN.md`:
 
 Each follows the same strict 1:1 pattern as existing `BRepPrimAPI_*` wrappers.
 
-## What Netgen.jl does not do
+## What Delone.jl does not do
 
 Even when upstream APIs exist, this package **does not**:
 
@@ -84,4 +85,4 @@ Those belong in a downstream solver or application layer.
 If you need a specific `DLL_HEADER` Netgen symbol or OCCT modeling-class that
 is missing, check `docs/API_COVERAGE.md` and open an issue with the upstream C++
 signature. New bindings belong in `NetgenCxxWrap_jll`; Julian composition belongs
-in `Netgen.jl`.
+in `Delone.jl`.

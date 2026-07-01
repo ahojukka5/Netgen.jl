@@ -1,44 +1,46 @@
-@testset "OCC load + GenerateMesh + counts (1:1 names)" begin
+@testset "OCC load + generate_mesh + counts (Julian API)" begin
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
-    @test Netgen.GetDimension(m) == 3
-    @test Netgen.GetNP(m) > 0
-    @test Netgen.GetNE(m) > 0
-    @test Netgen.GetNSE(m) > 0
+    @test mesh_dimension(m) == 3
+    @test num_nodes(m) > 0
+    @test num_cells(m) > 0
+    @test num_boundary_facets(m) > 0
+    @test num_nodes(m) == I.GetNP(m)
+    @test num_cells(m) == I.GetNE(m)
+    @test num_boundary_facets(m) == I.GetNSE(m)
 end
 
 @testset "extraction (Julia loops over 1:1 accessors)" begin
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
     P = points(m)
-    @test size(P) == (3, Netgen.GetNP(m))
+    @test size(P) == (3, num_nodes(m))
     T = tetrahedra(m)
-    @test size(T) == (4, Netgen.GetNE(m))
-    @test all(1 .<= T .<= Netgen.GetNP(m))
+    @test size(T) == (4, num_cells(m))
+    @test all(1 .<= T .<= num_nodes(m))
     S = surface_triangles(m)
-    @test size(S) == (3, Netgen.GetNSE(m))
+    @test size(S) == (3, num_boundary_facets(m))
     # element type via the 1:1 GetType
-    @test Netgen.GetType(Netgen.VolumeElement(m, 1)) == NG_TET
-    @test Netgen.GetType(Netgen.SurfaceElement(m, 1)) == NG_TRIG
+    @test I.GetType(I.VolumeElement(m, 1)) == NG_TET
+    @test I.GetType(I.SurfaceElement(m, 1)) == NG_TRIG
 end
 
-@testset "topology (1:1 UpdateTopology / GetTopology / GetNEdges / GetNFaces)" begin
+@testset "topology (Julian update_topology!)" begin
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
-    Netgen.UpdateTopology(m)
-    t = Netgen.GetTopology(m)
-    @test Netgen.GetNEdges(t) > 0
-    @test Netgen.GetNFaces(t) > 0
+    update_topology!(m)
+    t = I.GetTopology(m)
+    @test I.GetNEdges(t) > 0
+    @test I.GetNFaces(t) > 0
 end
 
-@testset "Save / Load (1:1)" begin
+@testset "save_mesh / load_mesh round-trip" begin
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
     tmp = tempname() * ".vol"
-    Netgen.Save(m, tmp)
+    save_mesh(m, tmp)
     @test isfile(tmp)
-    m2 = Netgen.new_mesh()
-    Netgen.Load(m2, tmp)
-    @test Netgen.GetNP(m2) == Netgen.GetNP(m)
+    m2 = load_mesh(tmp)
+    @test num_nodes(m2) == num_nodes(m)
     rm(tmp; force=true)
 end

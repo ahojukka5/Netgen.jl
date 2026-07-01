@@ -1,5 +1,5 @@
-# BREP string interop: OpenCascade shape → Netgen meshable geometry.
-# Requires `using OpenCascade` in runtests.jl (test dependency).
+# BREP string interop: Monge (OCCT) shape → Netgen meshable geometry.
+# Requires `using Monge` in runtests.jl (test dependency).
 
 @testset "BREP round-trip (to_brep_string / from_brep_string)" begin
     shape = box(1, 1, 1)
@@ -7,14 +7,14 @@
     @test brep isa String
     @test !isempty(brep)
     shape2 = from_brep_string(brep)
-    @test !IsNull(shape2)
+    @test !is_empty(shape2)
 end
 
 @testset "occ_geometry_from_brep_string meshes a box" begin
     geom = occ_geometry_from_brep_string(to_brep_string(box(1, 1, 1)))
     m = generate_mesh(geom; maxh=0.5)
-    @test Netgen.GetNP(m) > 0
-    @test Netgen.GetNE(m) > 0
+    @test I.GetNP(m) > 0
+    @test I.GetNE(m) > 0
 end
 
 @testset "BREP bridge mesh counts stable under shape round-trip" begin
@@ -22,8 +22,8 @@ end
     m1 = generate_mesh(occ_geometry_from_brep_string(brep); maxh=0.5)
     m2 = generate_mesh(
         occ_geometry_from_brep_string(to_brep_string(from_brep_string(brep))); maxh=0.5)
-    @test Netgen.GetNP(m1) == Netgen.GetNP(m2)
-    @test Netgen.GetNE(m1) == Netgen.GetNE(m2)
+    @test I.GetNP(m1) == I.GetNP(m2)
+    @test I.GetNE(m1) == I.GetNE(m2)
 end
 
 @testset "BREP bridge sphere refines onto the curved surface (r=1)" begin
@@ -33,9 +33,9 @@ end
     bverts() = unique(vec(surface_triangles(m)))
     X = points(m)
     @test maximum(abs(radius(X[:, j]) - 1) for j in bverts()) < 1e-12
-    np0 = Netgen.GetNP(m)
+    np0 = I.GetNP(m)
     refine!(m)
     X = points(m)
-    @test Netgen.GetNP(m) > np0
+    @test I.GetNP(m) > np0
     @test maximum(abs(radius(X[:, j]) - 1) for j in bverts()) < 1e-12
 end
