@@ -151,14 +151,19 @@ volume elements** (`1:GetNE(finest(session))` for 3D; a `Bool` vector /
 predicate from an error indicator). Netgen adds conforming closure refinement as
 needed. Previous levels are preserved. Increments `generation(session)`.
 
-`onlyonce`/`maxlevel` are forwarded to `bisect!` / `BisectionOptions`.
+`onlyonce`/`maxlevel`/`refine_p`/`refine_hp` are forwarded to `bisect!` /
+`BisectionOptions`. Set `refine_hp=true` for marked hp-refinement that appends a
+new h-level (Netgen bisection with hp flag); set `refine_p=true` for marked
+p-refinement on a new level copy.
 """
 function request_marked_refinement!(s::MeshHierarchySession, marked;
-                                    onlyonce::Bool=false, maxlevel::Integer=0)
+                                    onlyonce::Bool=false, maxlevel::Integer=0,
+                                    refine_p::Bool=false, refine_hp::Bool=false)
     m = copy_mesh(finest(s))
     UpdateTopology(m)
     mark_for_refinement!(m, marked)
-    bisect!(m; onlyonce=onlyonce, maxlevel=maxlevel)
+    bisect!(m; onlyonce=onlyonce, maxlevel=maxlevel,
+            refine_p=refine_p, refine_hp=refine_hp)
     push!(s.meshes, m)
     s.generation += 1
     return s
@@ -196,6 +201,95 @@ function request_second_order!(s::MeshHierarchySession; order::Integer=2)
         "higher-order curving via BuildCurvedElements/Curve is deferred"))
     make_second_order!(finest(s))
     s.metadata[:curved_order] = Int(order)
+    s.generation += 1
+    return s
+end
+
+# --- hp / p apply on the finest level (in-place; invalidates snapshots) -----
+
+"""
+    request_set_element_orders!(session, orders) -> session
+
+Set isotropic polynomial orders on every cell of the **current finest** mesh in
+place (`set_element_orders!`). Does not change topology. Bumps
+`generation(session)`; re-snapshot afterward.
+"""
+function request_set_element_orders!(s::MeshHierarchySession,
+                                     orders::AbstractVector{<:Integer})
+    set_element_orders!(finest(s), orders)
+    s.generation += 1
+    return s
+end
+
+"""
+    request_set_element_order!(session, enr, order) -> session
+
+Set order of a single cell on the finest mesh in place. Bumps `generation(session)`.
+"""
+function request_set_element_order!(s::MeshHierarchySession, enr::Integer,
+                                    order::Integer)
+    set_element_order!(finest(s), enr, order)
+    s.generation += 1
+    return s
+end
+
+"""
+    request_marked_p_refinement!(session, marked; onlyonce=false) -> session
+
+**In-place** marked p-refinement on the finest level via `Ngx_Mesh::Refine`
+(`NG_REFINE_P`). Does **not** append a level. `marked` indexes finest-level cells.
+Invalidates snapshots of the finest level. Bumps `generation(session)`.
+"""
+function request_marked_p_refinement!(s::MeshHierarchySession, marked;
+                                      onlyonce::Bool=false)
+    m = finest(s)
+    UpdateTopology(m)
+    mark_for_ngx_refinement!(m, marked)
+    ngx_refine!(m; reftype=NG_REFINE_P, onlyonce=onlyonce)
+    s.generation += 1
+    return s
+end
+
+"""
+    request_marked_hp_refinement!(session, marked; onlyonce=false) -> session
+
+**In-place** marked hp-refinement on the finest level via `Ngx_Mesh::Refine`
+(`NG_REFINE_HP`). Does **not** append a level. Invalidates finest-level snapshots.
+"""
+function request_marked_hp_refinement!(s::MeshHierarchySession, marked;
+                                        onlyonce::Bool=false)
+    m = finest(s)
+    UpdateTopology(m)
+    mark_for_ngx_refinement!(m, marked)
+    ngx_refine!(m; reftype=NG_REFINE_HP, onlyonce=onlyonce)
+    s.generation += 1
+    return s
+end
+
+"""
+    request_hp_refine!(session; levels=1, parameter=0.125,
+                       setorders=true, ref_level=false) -> session
+
+Global hp split on the finest mesh in place (`Ngx_Mesh::HPRefinement`). Does not
+append a level. Bumps `generation(session)`.
+"""
+function request_hp_refine!(s::MeshHierarchySession;
+                            levels::Integer=1, parameter::Real=0.125,
+                            setorders::Bool=true, ref_level::Bool=false)
+    hp_refine!(finest(s); levels=levels, parameter=parameter,
+               setorders=setorders, ref_level=ref_level)
+    s.generation += 1
+    return s
+end
+
+"""
+    request_split_alfeld!(session) -> session
+
+Alfeld hp split on the finest mesh in place (`Ngx_Mesh::SplitAlfeld`). Bumps
+`generation(session)`.
+"""
+function request_split_alfeld!(s::MeshHierarchySession)
+    split_alfeld!(finest(s))
     s.generation += 1
     return s
 end
