@@ -545,12 +545,14 @@ export load_step, load_iges, load_brep, load_geometry, generate_mesh,
        refine_uniform!, refine_marked!,
        nlevels, coarsest, finest, geometry, prolongation,
        # live session (authoritative handles + refinement requests)
-       MeshHierarchySession, mesh_session, level_mesh, generation,
+       MeshHierarchySession, mesh_session, level_mesh, unsafe_level_mesh,
+       mutate_level_mesh!, generation,
        request_uniform_refinement!, request_marked_refinement!,
        request_second_order!,
        # snapshot data contract (copies for downstream consumers)
        MeshLevelSnapshot, HierarchyTransferSnapshot, MeshHierarchySnapshot,
        level_snapshot, transfer_snapshot, hierarchy_snapshot,
+       supported_snapshot_topology, transfer_weight_semantics,
        # element extraction + region/tag helpers
        volume_tetrahedra, triangles2d, segments2d,
        cell_regions, boundary_regions, material_names, boundary_names,
