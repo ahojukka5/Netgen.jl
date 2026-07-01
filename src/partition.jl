@@ -1,23 +1,28 @@
 # --- partitioning / load-balancing data contract ----------------------------
-# Netgen.jl does NOT own domain decomposition. It only exposes stable
-# mesh/hierarchy/tag data (see snapshots.jl, tags.jl) so a consumer can build a
-# PartitionGraph and call METIS/ParMETIS-style backends itself. No METIS /
-# ParMETIS is called here, and no partition policy lives here.
+# Netgen.jl does NOT own domain decomposition. It exposes optional native
+# partition hints so a consumer can build PartitionGraph / METIS / ParMETIS input.
 
 """
-    native_partition_hint(mesh) -> Nothing
+    native_partition_hint(mesh) -> NamedTuple
 
-Optional native partition hint from Netgen. Returns `nothing` for the current
-(serial) build: Netgen's exported partition data
-(`Ngx_Mesh::GetDistantProcs`, `Ngx_Mesh::GetGlobalVertexNum`) is MPI-only and is
-not wrapped, so there is no native serial partition array to expose. This absence
-is reported honestly rather than fabricated.
+Optional native partition hints from Netgen's MPI interface:
 
-When an MPI-enabled artifact and the two strict-1:1 bindings exist, this may
-return per-node distant-proc / global-id data as **optional** input to a
-consumer's partitioner. It must never encode a partitioning *policy* — the
-consumer owns `PartitionGraph`, weights, METIS/ParMETIS backend selection,
-`PartitionAssignment`, ownership, ghost/halo construction, repartitioning and
-migration.
+- `global_vertex_ids::Vector{Int}` — per local vertex (1-based index into
+  [`points`](@ref)), the global vertex id (`Ngx_Mesh::GetGlobalVertexNum`). On
+  a serial build this equals the local 1-based id.
+- `distant_procs::Vector{Vector{Int}}` — per local vertex, MPI ranks that own
+  ghost copies (`Ngx_Mesh::GetDistantProcs`, nodetype `0`). Empty inner vectors
+  on a serial build.
+
+This is **optional input** to a consumer partitioner, not a partitioning policy.
+Netgen.jl does not call METIS/ParMETIS or assign ownership.
 """
-native_partition_hint(m) = nothing
+function native_partition_hint(m)
+    nm = Ngx_Mesh(m)
+    np = GetNP(m)
+    np == 0 && return (global_vertex_ids=Int[], distant_procs=Vector{Int}[])
+    return (
+        global_vertex_ids = [Int(GetGlobalVertexNum(nm, i - 1)) + 1 for i in 1:np],
+        distant_procs = [collect(Int, GetDistantProcs(nm, 0, i - 1)) for i in 1:np],
+    )
+end
