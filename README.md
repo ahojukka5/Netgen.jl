@@ -223,7 +223,7 @@ A growable stack of nested meshes sharing one geometry. Grow it during a
 simulation — uniformly or by an error indicator — and read the per-level mapping.
 
 ```julia
-h = coarse_hierarchy(geom; maxh=0.5)    # level 1
+h = mesh_hierarchy(geom; maxh=0.5)      # level 1
 refine_uniform!(h)                      # push a uniformly refined level
 refine_marked!(h, marked)               # push an adaptively refined level
 

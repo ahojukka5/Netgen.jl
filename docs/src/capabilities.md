@@ -45,7 +45,7 @@ method lists see `docs/API_COVERAGE.md` in the package tree.
 | Multigrid levels | `num_levels`, `level_nvertices`, `Ngx_Mesh.GetNLevels`, `GetNVLevel` |
 | Prolongation stencil | `parent_nodes`, `parent_elements`, `parent_surface_elements`, `GetParentNodes`, … |
 | Curved geometry on mesh | `Curve`, `GetCurveOrder`, `BuildCurvedElements` |
-| Copy / nested hierarchy helpers | `copy_mesh`, `MeshHierarchy`, `coarse_hierarchy`, `uniform_hierarchy`, `refine_uniform!` |
+| Copy / nested hierarchy helpers | `copy_mesh`, `MeshHierarchy`, `mesh_hierarchy`, `uniform_hierarchy`, `refine_uniform!` |
 
 ## Live session & snapshots (Julia layer)
 
@@ -76,7 +76,7 @@ for a full walkthrough.
 |------------|--------------|
 | Options validation | `MeshOptions`, `validate_options!` (throwing), `validate(::MeshOptions)` (non-throwing) |
 | Structured generation | `generate_mesh(...; result=true)` → `MeshGenerationResult`, `MeshGenerationDiagnostics` |
-| Mesh reports | `mesh_report` → `MeshReport` (`MeshValidationReport` + `MeshQualityReport` + `MeshTagReport` + topology); `isvalid`, `quality`/`mesh_quality`, `tag_report` |
+| Mesh reports | `mesh_report` → `MeshReport` (`MeshValidationReport` + `MeshQualityReport` + `MeshTagReport` + topology); `isvalid`, `quality`, `tag_report` |
 | Pre/post-meshing diagnostics | `meshability_report`, `meshing_diagnostics`, `suggest_mesh_fixes` |
 | Hierarchy/session reports | `hierarchy_report` → `MeshHierarchyReport` (`MeshLevelReport`, `TransferReport`); `refine!`/`refine_session!(...; result=true)` → `RefinementResult` |
 | Generic contract (OodiCore) | `report(x)`, `validate(x)`, `readiness(x, target)`, `to_namedtuple(x)` |

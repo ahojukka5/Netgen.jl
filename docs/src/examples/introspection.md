@@ -53,8 +53,8 @@ A failed attempt (e.g. `nothing` geometry, an empty mesh, or a backend
 `:geometry_import`, `:surface_mesh`, `:volume_mesh`, `:optimization`,
 `:post_validation`, `:unknown`) and fills `diagnostics.suggestions` with
 actionable `DiagnosticMessage`s (e.g. "try increasing maxh" or "heal/repair CAD
-geometry"). `try_generate_mesh` is an alias of `generate_mesh_result` for the
-same non-throwing path.
+geometry"). Use [`generate_mesh_result`](@ref) directly for the same
+non-throwing path (`try_generate_mesh` is a deprecated alias).
 
 ## Mesh reports: validation, quality, tags
 
@@ -67,7 +67,7 @@ r.validation.node_count
 r.validation.element_count
 isvalid(m)                 # shortcut: r.validation.valid
 
-q = quality(m)             # MeshQualityReport (mesh_quality is an alias)
+q = quality(m)             # MeshQualityReport (mesh_quality is a deprecated alias)
 q.min_quality; q.mean_quality
 q.min_edge_length; q.max_edge_length
 

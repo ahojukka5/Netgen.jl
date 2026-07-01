@@ -1,0 +1,77 @@
+# CI test workflow — Delone.jl
+#
+# CAVEAT (read before trusting a green check): this workflow has NOT been
+# validated end-to-end on a real GitHub Actions runner. It was authored by an
+# AI agent working locally, without network access to GitHub, without CMake/
+# OCCT/CxxWrap toolchain verification on ubuntu-latest, and without a real
+# NGSolveNetgen/OCCT_jll binary pull in that environment. It is a best-effort
+# first pass modeled directly on the commands documented in AGENTS.md /
+# README.md's "Build & test" / "Development" sections (build the native
+# library locally via gen/build_local.jl, then run test/runtests.jl), NOT a
+# guarantee that it passes on Actions. Expect to iterate on this after the
+# first real run (e.g. missing system packages for CMake/OCCT, artifact
+# resolution issues, etc.).
+#
+# Known structural caveat: gen/build_local.jl currently expects a sibling
+# checkout of NetgenCxxWrap_jll at ../NetgenCxxWrap_jll (see that script's
+# BUNDLED path) since NetgenCxxWrap_jll isn't a registered/published package
+# yet. This workflow does not attempt to fetch that sibling repo (its location
+# is not specified anywhere in AGENTS.md/README.md as a public URL) — if the
+# build step fails for that reason, whoever owns gen/build_local.jl and the
+# monorepo layout needs to either vendor/fetch that sibling repo here, or
+# adjust the build step accordingly.
+name: Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch: {}
+
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Julia ${{ matrix.julia-version }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # First pass: ubuntu-latest only. The native build toolchain
+        # (CMake + OCCT_jll + CxxWrap/JlCxx) has not been verified on
+        # macOS/Windows runners, so no matrix expansion yet.
+        os: [ubuntu-latest]
+        # Matches the locally-verified `julia --version` (1.12.6) in the dev
+        # environment this workflow was authored in. AGENTS.md's Project.toml
+        # [compat] lower bound is julia = "1.6", but only 1.12 has actually
+        # been exercised locally.
+        julia-version: ['1.12']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.julia-version }}
+          arch: x64
+
+      - name: Cache Julia artifacts/packages
+        uses: julia-actions/cache@v2
+
+      - name: Instantiate project environment
+        uses: julia-actions/julia-buildpkg@v1
+
+      # NOTE: this step needs a working CMake + OCCT toolchain on the runner.
+      # ubuntu-latest ships CMake, but OCCT_jll (a Julia JLL artifact) should
+      # provide OCCT itself; system-level build tools (a C++ compiler, etc.)
+      # are assumed present via ubuntu-latest's default toolchain. This has
+      # not been confirmed on an actual runner.
+      - name: Build native library (libnetgen_cxxwrap)
+        run: julia --project=. gen/build_local.jl
+
+      - name: Run test suite
+        run: julia --project=. test/runtests.jl

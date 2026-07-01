@@ -27,7 +27,7 @@ mesh = generate_mesh(geom;
     maxh=0.5,
     minh=0.01,          # optional lower bound
     grading=0.3,        # mesh grading between coarse and fine regions
-    secondorder=false,
+    second_order=false,
     optsteps2d=3,
     optsteps3d=3,
 )
@@ -73,7 +73,7 @@ For reuse across generate / improve / optimize steps, build parameters explicitl
 mp = meshing_parameters(maxh=0.2, minh=0.01, grading=0.3)
 ```
 
-Set `secondorder=true` before generation if you want second-order elements from
+Set `second_order=true` before generation if you want second-order elements from
 the mesher (alternative: [`make_second_order!`](@ref) after the fact — see
 [Refinement](@ref "Refinement")).
 

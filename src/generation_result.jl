@@ -193,7 +193,7 @@ function generate_mesh_result(geom, opts::MeshOptions)
     return MeshGenerationResult(true, m, opts, diag, time() - t0, warnings)
 end
 
-try_generate_mesh(geom, opts::MeshOptions) = generate_mesh_result(geom, opts)
+Base.@deprecate try_generate_mesh(geom, opts::MeshOptions) generate_mesh_result(geom, opts)
 
 """
     generate_mesh(geometry; options=nothing, maxh=nothing, result=false, kwargs...) -> mesh | MeshGenerationResult

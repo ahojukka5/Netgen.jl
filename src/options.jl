@@ -69,13 +69,13 @@ function to_meshing_parameters(opts::MeshOptions)
         optsteps3d=opts.optsteps3d)
 end
 
-"""Build and validate `MeshOptions` from keyword arguments (legacy `secondorder` alias supported)."""
+"""Build and validate `MeshOptions` from keyword arguments (legacy `secondorder` keyword deprecated in favor of `second_order`)."""
 function mesh_options(;
         maxh::Real,
         minh::Union{Nothing,Real}=nothing,
         grading::Union{Nothing,Real}=nothing,
-        secondorder::Bool=false,
-        second_order::Bool=secondorder,
+        secondorder::Union{Nothing,Bool}=nothing,
+        second_order::Bool=false,
         optimize::Bool=false,
         dimension::Union{Nothing,Integer}=nothing,
         preserve_tags::Bool=true,
@@ -83,6 +83,12 @@ function mesh_options(;
         optsteps3d::Union{Nothing,Integer}=nothing,
         kwargs...)
     isempty(kwargs) || @warn "ignored keyword arguments" kwargs=keys(kwargs)
+    if secondorder !== nothing
+        Base.depwarn(
+            "keyword `secondorder` is deprecated, use `second_order`",
+            :mesh_options)
+        second_order = secondorder
+    end
     return validate_options!(MeshOptions(;
         maxh=Float64(maxh),
         minh=minh === nothing ? nothing : Float64(minh),

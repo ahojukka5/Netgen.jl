@@ -1,9 +1,14 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Delone = "0a3734f8-1dfd-4ffb-90f2-cbaa38dcac37"
+OodiCore = "7c15cd61-9c6a-4671-bc94-9960963998ac"
+
+[sources]
+OodiCore = {path = "/Users/jukka/dev/OodiCore.jl"}
 
 [compat]
 Documenter = "1"
+OodiCore = "0.1"
 julia = "1.6"
 
 [targets]

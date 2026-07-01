@@ -1,0 +1,66 @@
+# Documentation build workflow — Delone.jl
+#
+# CAVEAT: not validated end-to-end on a real GitHub Actions runner (authored
+# locally by an AI agent with no access to Actions). Best-effort first pass,
+# modeled on README.md's Documentation section:
+#   julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+#   julia --project=docs docs/make.jl
+#
+# Deploy status: as of this workflow's authoring, docs/make.jl's makedocs(...)
+# call does NOT invoke Documenter's deploydocs(...), so this workflow only
+# BUILDS the docs (as a check) and does not deploy/publish them anywhere.
+# Whoever owns docs/make.jl needs to add a deploydocs(...) call (with
+# `repo = "github.com/<org>/Delone.jl.git"` etc.) before deployment can work;
+# this workflow deliberately does not edit docs/make.jl (another agent may be
+# concurrently changing it) or invent deploy behavior that doesn't exist yet.
+#
+# Once deploydocs() exists in docs/make.jl, Documenter's GitHub Actions deploy
+# key convention applies: a repo secret named DOCUMENTER_KEY (an SSH deploy
+# key with write access, or a suitably scoped token) must be configured by a
+# human in the repo settings — this workflow does not fabricate or assume any
+# such secret value. The commented-out `env:` block below shows where it would
+# go once deploydocs() exists.
+name: Documentation
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch: {}
+
+concurrency:
+  group: docs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    name: Build documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.12'
+          arch: x64
+
+      - name: Cache Julia artifacts/packages
+        uses: julia-actions/cache@v2
+
+      - name: Develop Delone into the docs environment
+        run: julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+
+      - name: Build docs
+        # NOTE: docs/make.jl does not call deploydocs(), so this is a build
+        # check only — nothing is published. See the caveats at the top of
+        # this file.
+        run: julia --project=docs docs/make.jl
+        # env:
+        #   # Only needed once docs/make.jl calls deploydocs(). Must be added
+        #   # as a repo secret by a human; not something this workflow can
+        #   # provide.
+        #   DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
+        #   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

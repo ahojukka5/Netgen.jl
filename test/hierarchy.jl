@@ -49,7 +49,7 @@ end
 
 @testset "adaptive: grow hierarchy mid-simulation via refine_marked!" begin
     geom = load_step(STEP)
-    h = coarse_hierarchy(geom; maxh=40.0)
+    h = mesh_hierarchy(geom; maxh=40.0)
     @test nlevels(h) == 1
     # mimic an error indicator: mark a spatial subset of the finest mesh
     m = finest(h); ne = I.GetNE(m)

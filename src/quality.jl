@@ -136,9 +136,4 @@ function quality(m)
         min_e, max_e, ar, warnings)
 end
 
-"""
-    mesh_quality(mesh) -> MeshQualityReport
-
-Alias for [`quality`](@ref).
-"""
-mesh_quality(m) = quality(m)
+Base.@deprecate mesh_quality(m) quality(m)
