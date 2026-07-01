@@ -75,3 +75,37 @@ end
     m = generate_mesh(geom; maxh=40.0)
     @test native_partition_hint(m) === nothing
 end
+
+@testset "2D tag/name behavior (documented current state, no invented names)" begin
+    disk = Circle(0.0, 0.0, 1.0, "disk", "circle")
+    m = generate_mesh(geometry2d(disk); maxh=0.4)
+    # topological region ids DO work in 2D
+    cr = cell_regions(m)
+    @test length(cr) == Netgen.GetNSE(m)
+    @test all(cr .>= 1)
+    br = boundary_regions(m)
+    @test length(br) == Netgen.GetNSeg(m)
+    @test all(br .>= 1)
+    # NAMES: 2D material names are unavailable through this path (GetNDomains==0),
+    # so material_names is empty. We assert the *current* behavior rather than
+    # pretending support exists (see docstring/README limitation).
+    mats = material_names(m)
+    @test mats isa Dict{Int32,String}
+    @test isempty(mats)
+    @test Netgen.GetNDomains(m) == 0
+    # boundary_names returns a Dict but its keys (face-descriptor indices) are not
+    # guaranteed to correspond to boundary_regions (segment indices) in 2D.
+    bnames = boundary_names(m)
+    @test bnames isa Dict{Int32,String}
+end
+
+@testset "README does not link the private (gitignored) audit file" begin
+    readme = read(joinpath(@__DIR__, "..", "README.md"), String)
+    @test !occursin("audit/NETGEN_LIVE_HIERARCHY_AND_PARTITION_CONTRACT", readme)
+    @test !occursin("](audit/", readme)
+    # still documents the core contract
+    @test occursin("Live session", readme)
+    @test occursin("Supported snapshot topology", readme)
+    @test occursin("Transfer weights", readme)
+    @test occursin("Partitioning responsibility", readme)
+end
