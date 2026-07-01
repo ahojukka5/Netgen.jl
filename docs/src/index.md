@@ -15,7 +15,8 @@ preconditioners.
 
 ```
 NGSolveNetgen_jll   upstream Netgen + OpenCASCADE binaries
-NetgenCxxWrap_jll   strict 1:1 CxxWrap bindings (C++ names preserved)
+NetgenCxxWrap_jll   strict 1:1 CxxWrap bindings for meshing (+ BREP bridge)
+OpenCascadeCxxWrap_jll / OpenCascade.jl   OCCT modeling (separate package)
 Netgen.jl           Julian helpers + live hierarchy / snapshot contract
 ```
 
@@ -23,7 +24,7 @@ Netgen.jl           Julian helpers + live hierarchy / snapshot contract
 
 | Area | Summary |
 |------|---------|
-| **Geometry** | Load STEP/IGES/BREP/STL; build 2D CSG (`Circle`, `Rectangle`); model 3D shapes with `Netgen.OCC` (OpenCASCADE kernel, 1:1 class names). |
+| **Geometry** | Load STEP/IGES/BREP/STL; build 2D CSG (`Circle`, `Rectangle`); import 3D shapes from OpenCascade.jl via BREP strings. |
 | **Meshing** | `generate_mesh(geom; maxh=…)`; extract points and connectivity; topology queries. |
 | **Refinement** | Uniform and marked bisection; geometry-aware boundary projection; second-order curving. |
 | **Hierarchy** | `Ngx_Mesh` parent maps; `MeshHierarchySession` with refinement requests; copied snapshots for consumers. |
@@ -59,7 +60,6 @@ For 3D CAD import or programmatic OCC modeling, see [Building geometry](@ref "Bu
 
 ## Naming convention
 
-Wrapped C++ symbols keep their **original names** (`GetNP`, `Refine`,
-`BRepPrimAPI_MakeCylinder`, …). Julian helpers use snake_case (`generate_mesh`,
-`parent_nodes`, `mesh_session`). Use `using Netgen` for helpers; add
-`using Netgen.OCC` when calling raw OpenCASCADE builders.
+Wrapped C++ symbols keep their **original names** (`GetNP`, `Refine`, …).
+Julian helpers use snake_case (`generate_mesh`, `parent_nodes`, `mesh_session`).
+Use `using Netgen` for meshing; use **OpenCascade.jl** for CAD modeling.
