@@ -1,7 +1,7 @@
 # Building geometry
 
 Netgen.jl accepts geometry from files, 2D constructive solid geometry (CSG), or
-programmatic OpenCASCADE modeling.
+shapes built in [OpenCascade.jl](https://github.com/) and passed via BREP strings.
 
 ## Import CAD files
 
@@ -16,7 +16,7 @@ stl_geom = load_stl("surface.stl")
 ```
 
 `load_*` functions return a Netgen geometry object (`NetgenGeometry` /
-`OCCGeometry` / `STLGeometry`) that you pass to `generate_mesh` (see [Meshing](@ref "Meshing")).
+`STLGeometry`) that you pass to `generate_mesh` (see [Meshing](@ref "Meshing")).
 
 ## 2D CSG — disks, rectangles, booleans
 
@@ -41,46 +41,32 @@ geom = geometry2d(outer - notch)
 Boolean operators match Netgen's CSG conventions (`+` union, `*` intersection,
 `-` difference).
 
-## 3D modeling with OpenCASCADE (`Netgen.OCC`)
+## 3D modeling with OpenCascade.jl
 
-`Netgen.OCC` exposes raw OCCT class names — no Julian aliases. Build a
-`TopoDS_Shape`, then wrap it:
+CAD modeling lives in **OpenCascade.jl** (not Netgen). Build a shape there, then
+import via the in-memory BREP boundary:
 
 ```julia
-using Netgen
-using Netgen.OCC
+using OpenCascade, Netgen
 
-# Cylinder: radius 1, height 2, axis along z
-ax = gp_Ax2(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(0.0, 0.0, 1.0))
-cyl = Shape(BRepPrimAPI_MakeCylinder(ax, 1.0, 2.0))
-
-# Box from two corners
-box = Shape(BRepPrimAPI_MakeBox(gp_Pnt(0.0, 0.0, 0.0), gp_Pnt(1.0, 1.0, 1.0)))
-
-# Sphere
-sphere = Shape(BRepPrimAPI_MakeSphere(gp_Pnt(0.0, 0.0, 0.0), 1.0))
-
-geom = OCCGeometry(cyl)   # meshable Netgen geometry
+shape = cylinder(1.0, 2.0)
+geom  = occ_geometry_from_brep_string(to_brep_string(shape))
+mesh  = generate_mesh(geom; maxh=0.3)
 ```
 
 ### Booleans
 
 ```julia
-big   = Shape(BRepPrimAPI_MakeBox(gp_Pnt(0,0,0), gp_Pnt(2,2,2)))
-small = Shape(BRepPrimAPI_MakeSphere(gp_Pnt(1,1,1), 0.6))
-cut   = Shape(BRepAlgoAPI_Cut(big, small))
-geom  = OCCGeometry(cut)
+big   = box(2, 2, 2)
+small = sphere(0.6; center=gp_Pnt(1, 1, 1))
+cut   = cut(big, small)
+geom  = occ_geometry_from_brep_string(to_brep_string(cut))
 ```
 
-### Fillets and offsets
-
-Fillet/chamfer and offset APIs (`BRepFilletAPI_*`, `BRepOffsetAPI_*`) are
-wrapped 1:1. See the OCC tests under `test/occ_*.jl` for patterns.
-
-### Export / re-import
+### File export / Netgen file import
 
 ```julia
-BRepTools_Write(shape, "part.brep")
+write_brep(shape, "part.brep")
 geom = load_brep("part.brep")
 ```
 
@@ -90,7 +76,7 @@ geom = load_brep("part.brep")
 |------|----------------|
 | Existing CAD part | `load_step` / `load_brep` |
 | Parametric 2D domain | `Circle` / `Rectangle` CSG |
-| Custom 3D solid | `Netgen.OCC` primitives + booleans |
+| Custom 3D solid | OpenCascade.jl → `occ_geometry_from_brep_string` |
 | Surface scan | `load_stl` |
 
 Next: [Meshing](@ref "Meshing") turns any of these geometries into a simplicial mesh.
