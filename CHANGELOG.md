@@ -4,6 +4,27 @@ All notable changes to Delone.jl are documented in this file.
 
 ## [Unreleased]
 
+### Changed (roadmap Phase 5.4 — naming consolidation)
+- **`set_element_orders!`'s 5-arg single-cell anisotropic overload renamed
+  to `set_element_orders_xyz!`**, pairing with the reader
+  `element_orders_xyz` and disambiguating it from the bulk-vector
+  `set_element_orders!(mesh, orders)` overload and from singular
+  `set_element_order!`. Old call shape `Base.@deprecate`d.
+- The deprecated aliases `try_generate_mesh`, `coarse_hierarchy`,
+  `mesh_quality`, `mesh`, and `unsafe_level_mesh` were moved out of their
+  topic-grouped export lines in `src/Delone.jl` into one dedicated,
+  commented "deprecated aliases" export block, so tab-completion no longer
+  surfaces them at equal visibility to their replacements. No functional
+  change.
+
+### Added (roadmap Phase 5.4)
+- `tetrahedra`/`surface_triangles` docstrings gained "See also" cross-links
+  to their dimension-checked siblings (`volume_tetrahedra`/`triangles2d`/
+  `segments2d`).
+- `docs/src/mesh_options.md` gained a "Which constructor do I want?"
+  comparison table for `MeshOptions`/`mesh_options`/`meshing_parameters`/
+  `to_meshing_parameters`.
+
 ### Changed (roadmap Phase 5.3 — breaking API fixes)
 - **`optimize_volume!` now returns the mesh, not a status code**, matching
   AGENTS.md's "mutating `!` functions return the mesh" convention that every
