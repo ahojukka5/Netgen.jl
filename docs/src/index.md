@@ -60,7 +60,7 @@ For 3D CAD import or programmatic OCC modeling, see [Building geometry](@ref "Bu
 - [Wrapped capabilities](@ref) — what this package exposes (Netgen + OCC surface).
 - [Not yet wrapped](@ref) — known gaps and out-of-scope areas.
 - Example pages: [Building geometry](@ref "Building geometry"), [Meshing](@ref "Meshing"),
-  [Refinement](@ref "Refinement"), [Mesh hierarchies & sessions](@ref "Mesh hierarchies & sessions"),
+  [Refinement](examples/refinement.md), [Mesh hierarchies & sessions](@ref "Mesh hierarchies & sessions"),
   [Structured reports & introspection](@ref "Structured reports & introspection"),
   [Tags, hp-adaptivity & FEM data](@ref "Tags, hp-adaptivity & FEM data").
 - [Development](@ref) — building the native library and this documentation locally.

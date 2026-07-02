@@ -51,7 +51,7 @@ makedocs(
         "Development" => "development.md",
     ],
     checkdocs = :exported,
-    warnonly = [:cross_references, :missing_docs, :docs_block],
+    warnonly = [:missing_docs, :docs_block],
     doctest = true,
 )
 

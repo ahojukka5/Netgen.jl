@@ -96,7 +96,8 @@ Explicitly qualified as `Base.isvalid` (not a bare `function isvalid(...)`) so
 this extends the same generic function `using Delone` brings into scope,
 rather than shadowing it with a new module-local `isvalid` — that shadowing
 is exactly the kind of name collision this package is meant to avoid (see
-[`OodiCore.jl`](../OodiCore.jl)'s own `Base.isvalid(::ValidationReport)`).
+`OodiCore.jl`'s own `Base.isvalid(::ValidationReport)`, a different package
+from Delone.jl's own API).
 """
 Base.isvalid(m) = validate(m).valid
 

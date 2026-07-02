@@ -158,7 +158,7 @@ end
     face_edges(mesh, fnr) -> Vector{Int}
 
 Edge indices bounding topology face `fnr` (1-based, `1:GetNFaces(GetTopology(mesh))`).
-Uses `Ngx_Mesh::GetFaceEdges`. Call [`Internals.UpdateTopology`](@ref) after mesh
+Uses `Ngx_Mesh::GetFaceEdges`. Call `Internals.UpdateTopology` after mesh
 changes if results look stale.
 """
 function face_edges(m, fnr::Integer)

@@ -67,8 +67,9 @@ vol, surf = connectivity(mesh3d)
 (vol == T, surf == F)
 ```
 
-For low-level access, use [`Delone.Internals`](@ref) (`GetNP`, `Point(mesh, i)`,
-`VolumeElement(mesh, i)`, …).
+For low-level access, use `Delone.Internals` (`GetNP`, `Point(mesh, i)`,
+`VolumeElement(mesh, i)`, …) — see [Internals escape hatch](../internals_escape_hatch.md)
+for when and how to drop down to it.
 
 ## Mesh I/O
 
@@ -92,7 +93,7 @@ typeof(mp)
 
 Set `second_order=true` before generation if you want second-order elements from
 the mesher (alternative: [`make_second_order!`](@ref) after the fact — see
-[Refinement](@ref "Refinement")).
+[Refinement](refinement.md)).
 
 ## Topology
 
@@ -157,4 +158,4 @@ Int(num_cells(stl_mesh))
 STL geometry is triangle-based; volume meshing typically starts from a closed
 BREP/STEP solid instead.
 
-Next: [Refinement](@ref "Refinement").
+Next: [Refinement](refinement.md).
