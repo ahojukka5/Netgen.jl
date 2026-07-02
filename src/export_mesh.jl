@@ -24,7 +24,7 @@ function export_vtk(m, path::AbstractString;
         elseif d == 2
             Tr = triangles2d(m)
             for e in axes(Tr, 2)
-                push!(cells, vcat(collect(Tr[:, e] .- 1), [0]))  # pad to 3 nodes
+                push!(cells, collect(Tr[:, e] .- 1))  # 3 nodes, matches VTK_TRIANGLE
                 push!(types, 5)  # VTK_TRIANGLE
             end
         end

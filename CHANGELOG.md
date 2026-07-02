@@ -5,6 +5,11 @@ All notable changes to Delone.jl are documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- `export_vtk`'s 2D `include_volume` path wrote 4-node cells (a bogus padded
+  4th index) while still labeling them `VTK_TRIANGLE` (which requires
+  exactly 3) — would have produced a file real VTK readers (e.g. ParaView)
+  reject or misread. Found while adding real content-verification tests for
+  export functions; fixed by removing the erroneous padding.
 - `refine_near!`/`MeshOptions.local_size` now genuinely localizes in 2D, not
   just 3D. Previously, 2D used `mark_for_refinement!`/`bisect!`, which
   refines 2D meshes uniformly regardless of marking; it now uses
