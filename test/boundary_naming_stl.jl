@@ -51,7 +51,7 @@ end
 @testset "GetFaceDescriptor (const) vs GetFaceDescriptorMut (mutable) — documented persistence gotcha" begin
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
-    # The const-ref accessor exists and can be read from, but Internals.SetBCName
+    # The const-ref accessor exists and can be read from, but Netgen.SetBCName
     # has no method accepting a ConstCxxRef{FaceDescriptor} -- confirming that
     # set_boundary_name! must go through GetFaceDescriptorMut to persist.
     fd_const = I.GetFaceDescriptor(m, 1)

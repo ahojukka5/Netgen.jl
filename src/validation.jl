@@ -77,11 +77,11 @@ function _element_type_counts(m)
     d = mesh_dimension(m)
     counts = Dict{Symbol,Int}()
     if d == 3
-        counts[:tet] = Internals.GetNE(m)
-        counts[:tri] = Internals.GetNSE(m)
+        counts[:tet] = Netgen.GetNE(m)
+        counts[:tri] = Netgen.GetNSE(m)
     elseif d == 2
-        counts[:tri] = Internals.GetNSE(m)
-        counts[:segment] = Internals.GetNSeg(m)
+        counts[:tri] = Netgen.GetNSE(m)
+        counts[:segment] = Netgen.GetNSeg(m)
     end
     return counts
 end

@@ -1,5 +1,5 @@
 # --- periodic boundary condition setup (OCC face identification) -----------
-# Julia helpers over Internals.OCC_NrFaces/OCC_FaceBoundingBox/
+# Julia helpers over Netgen.OCC_NrFaces/OCC_FaceBoundingBox/
 # OCC_IdentifyFaces/OCC_RebuildGeometry, which wrap Netgen's OCC-level
 # Identifications mechanism (netgen::Identify + Identifications::ID_TYPE).
 #
@@ -16,7 +16,7 @@
 # that geometry's own snapshot is now stale. The only safe fix — rebuilding
 # the *same* OCCGeometry instance in place would duplicate its internal
 # state — is to construct a *fresh* OCCGeometry from the same underlying
-# shape (`Internals.OCC_RebuildGeometry`), which re-discovers the identical
+# shape (`Netgen.OCC_RebuildGeometry`), which re-discovers the identical
 # faces (OCC's B-Rep sub-shapes are reference-counted, not recreated) with a
 # now-current snapshot. `identify_periodic!`/`identify_periodic_box!` do this
 # automatically and return the *new* handle — always use the returned
@@ -32,7 +32,7 @@ geometry).
 """
 function occ_nr_faces(geom)
     try
-        return Int(Internals.OCC_NrFaces(geom))
+        return Int(Netgen.OCC_NrFaces(geom))
     catch e
         throw(ArgumentError("occ_nr_faces: $(sprint(showerror, e))"))
     end
@@ -50,7 +50,7 @@ function occ_face_bbox(geom, facenr::Integer)
     (1 <= facenr <= n) || throw(ArgumentError(
         "occ_face_bbox: face $facenr out of range (1:$n)"))
     buf = zeros(Cdouble, 6)
-    Internals.OCC_FaceBoundingBox(geom, Int(facenr), buf)
+    Netgen.OCC_FaceBoundingBox(geom, Int(facenr), buf)
     return (xmin=buf[1], ymin=buf[2], zmin=buf[3], xmax=buf[4], ymax=buf[5], zmax=buf[6])
 end
 
@@ -125,13 +125,13 @@ function identify_periodic!(geom, facenr_me::Integer, facenr_you::Integer,
     (1 <= facenr_you <= n) || throw(ArgumentError(
         "identify_periodic!: facenr_you=$facenr_you out of range (1:$n)"))
     tx, ty, tz = _as_translation3(translation)
-    nident = Int(Internals.OCC_IdentifyFaces(geom, Int(facenr_me), Int(facenr_you),
+    nident = Int(Netgen.OCC_IdentifyFaces(geom, Int(facenr_me), Int(facenr_you),
                                               String(name), Int(type), tx, ty, tz))
     nident == 0 && throw(ArgumentError(
         "identify_periodic!: no matching sub-shapes found between faces " *
         "$facenr_me and $facenr_you under translation $translation " *
         "(wrong face pair or translation?)"))
-    return Internals.OCC_RebuildGeometry(geom)
+    return Netgen.OCC_RebuildGeometry(geom)
 end
 
 """

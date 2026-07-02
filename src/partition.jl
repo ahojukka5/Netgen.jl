@@ -18,11 +18,11 @@ This is **optional input** to a consumer partitioner, not a partitioning policy.
 Delone.jl does not call METIS/ParMETIS or assign ownership.
 """
 function native_partition_hint(m)
-    nm = Internals.Ngx_Mesh(m)
-    np = Internals.GetNP(m)
+    nm = Netgen.Ngx_Mesh(m)
+    np = Netgen.GetNP(m)
     np == 0 && return (global_vertex_ids=Int[], distant_procs=Vector{Int}[])
     return (
-        global_vertex_ids = [Int(Internals.GetGlobalVertexNum(nm, i - 1)) + 1 for i in 1:np],
-        distant_procs = [collect(Int, Internals.GetDistantProcs(nm, 0, i - 1)) for i in 1:np],
+        global_vertex_ids = [Int(Netgen.GetGlobalVertexNum(nm, i - 1)) + 1 for i in 1:np],
+        distant_procs = [collect(Int, Netgen.GetDistantProcs(nm, 0, i - 1)) for i in 1:np],
     )
 end

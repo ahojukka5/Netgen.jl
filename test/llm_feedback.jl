@@ -237,13 +237,13 @@ end
     rm(svg; force=true)
 end
 
-@testset "public reports do not expose Internals types" begin
+@testset "public reports do not expose Netgen types" begin
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
     r = mesh_report(m)
-    @test !(r.validation isa Delone.Internals.Mesh)
+    @test !(r.validation isa Delone.Netgen.Mesh)
     ready = oodi_snapshot_readiness(m)
-    @test !(ready isa Delone.Internals.Mesh)
+    @test !(ready isa Delone.Netgen.Mesh)
 end
 
 @testset "introspection contract: report/validate/readiness" begin

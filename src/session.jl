@@ -157,7 +157,7 @@ end
 
 Append a new finest level by element-wise, geometry-aware **bisection** of a copy
 of the current finest mesh. `marked` is indexed by the **current finest level's
-volume elements** (`1:Internals.GetNE(finest(session))` for 3D; a `Bool` vector /
+volume elements** (`1:Netgen.GetNE(finest(session))` for 3D; a `Bool` vector /
 predicate from an error indicator). Netgen adds conforming closure refinement as
 needed. Previous levels are preserved. Increments `generation(session)`.
 
@@ -170,7 +170,7 @@ function request_marked_refinement!(s::MeshHierarchySession, marked;
                                     onlyonce::Bool=false, maxlevel::Integer=0,
                                     refine_p::Bool=false, refine_hp::Bool=false)
     m = copy_mesh(finest(s))
-    Internals.UpdateTopology(m)
+    Netgen.UpdateTopology(m)
     mark_for_refinement!(m, marked)
     bisect!(m; onlyonce=onlyonce, maxlevel=maxlevel,
             refine_p=refine_p, refine_hp=refine_hp)
@@ -253,7 +253,7 @@ Invalidates snapshots of the finest level. Bumps `generation(session)`.
 function request_marked_p_refinement!(s::MeshHierarchySession, marked;
                                       onlyonce::Bool=false)
     m = finest(s)
-    Internals.UpdateTopology(m)
+    Netgen.UpdateTopology(m)
     mark_for_ngx_refinement!(m, marked)
     ngx_refine!(m; reftype=NG_REFINE_P, onlyonce=onlyonce)
     s.generation += 1
@@ -269,7 +269,7 @@ end
 function request_marked_hp_refinement!(s::MeshHierarchySession, marked;
                                         onlyonce::Bool=false)
     m = finest(s)
-    Internals.UpdateTopology(m)
+    Netgen.UpdateTopology(m)
     mark_for_ngx_refinement!(m, marked)
     ngx_refine!(m; reftype=NG_REFINE_HP, onlyonce=onlyonce)
     s.generation += 1

@@ -136,7 +136,7 @@ end
 
 # --- to_namedtuple(x) -------------------------------------------------------
 # Recursive, serialization-friendly conversion of local report structs. Never
-# emits raw Internals handles (see the MeshGenerationResult specialization).
+# emits raw Netgen handles (see the MeshGenerationResult specialization).
 # OodiCore already provides to_namedtuple for DiagnosticMessage, PipelineTarget,
 # ValidationReport, ReadinessReport, ObjectReport, and ArtifactRef.
 

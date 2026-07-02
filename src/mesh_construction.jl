@@ -5,7 +5,7 @@
 # solver's own remesher) as plain arrays. `mesh_from_arrays` closes that gap.
 #
 # Historical note: `mesh_from_arrays` was originally built via a `.vol` file
-# round-trip (see below) because at the time `Internals.Element`/`Element2d`
+# round-trip (see below) because at the time `Netgen.Element`/`Element2d`
 # had no registered constructor and no `PNum` setter — `AddVolumeElement`/
 # `AddSurfaceElement`/`SetVolumeElement`/`SetSurfaceElement` were reachable
 # but structurally unusable. `NetgenCxxWrap_jll` commit `9e4860e` fixed this
@@ -22,8 +22,8 @@
 # (see `save_mesh`/`load_mesh` in mesh.jl) and round-trip through Netgen's
 # native `.vol` ASCII mesh format. That format is not gated behind the missing
 # Element constructor, so this module hand-writes a minimal `.vol` file from
-# the input arrays and loads it back via the same `Internals.new_mesh()` +
-# `Internals.Load` path `load_mesh` already uses.
+# the input arrays and loads it back via the same `Netgen.new_mesh()` +
+# `Netgen.Load` path `load_mesh` already uses.
 #
 # The `.vol` grammar below was reverse-engineered by reading the real
 # `Mesh::Save`/`Mesh::Load` implementation in a sibling Netgen source checkout
@@ -80,7 +80,7 @@
 #
 # Verified round-trip: a hand-written single-tetrahedron `.vol` file (4
 # points, 1 volume element, its 4 boundary triangles) loaded via
-# `Internals.new_mesh()` + `Internals.Load` reported the expected
+# `Netgen.new_mesh()` + `Netgen.Load` reported the expected
 # `GetNP`/`GetNE`/`GetNSE`/`GetNDomains`/`GetNFD`, and `points`/`tetrahedra`/
 # `surface_triangles`/`cell_regions`/`boundary_regions` extracted the exact
 # input data back out before this general writer was implemented.
@@ -114,11 +114,11 @@ Arguments:
 
 Implementation: hand-writes a temporary Netgen `.vol` ASCII mesh file (see the
 grammar documented at the top of `src/mesh_construction.jl`) and loads it via
-the same `Internals.new_mesh()` + `Internals.Load` path [`load_mesh`](@ref)
+the same `Netgen.new_mesh()` + `Netgen.Load` path [`load_mesh`](@ref)
 uses; the temp file is removed afterward (even on error). This sidesteps a
-real gap in `Delone.Internals`: `Internals.Element`/`Internals.Element2d` have
-no registered constructor, so `Internals.AddVolumeElement`/
-`Internals.AddSurfaceElement` are unreachable in practice — see the module
+real gap in `Delone.Netgen`: `Netgen.Element`/`Netgen.Element2d` have
+no registered constructor, so `Netgen.AddVolumeElement`/
+`Netgen.AddSurfaceElement` are unreachable in practice — see the module
 docstring comment above `mesh_from_arrays` in the source for details.
 
 Throws `ArgumentError` on inconsistent shapes, out-of-range/non-1-based node
@@ -174,8 +174,8 @@ function mesh_from_arrays(points::AbstractMatrix, tets::AbstractMatrix;
     path = tempname() * ".vol"
     try
         _write_vol_file(path, points, tets, surface, cregions, bregions)
-        m = Internals.new_mesh()
-        Internals.Load(m, path)
+        m = Netgen.new_mesh()
+        Netgen.Load(m, path)
 
         material_names !== nothing && rename_materials!(m, material_names)
         boundary_names !== nothing && rename_boundaries!(m, boundary_names)
@@ -316,7 +316,7 @@ end
 """
     add_volume_element!(mesh, point_ids; region=1) -> mesh
 
-Add one tetrahedron to `mesh` (`Internals.Element` + `Internals.AddVolumeElement`).
+Add one tetrahedron to `mesh` (`Netgen.Element` + `Netgen.AddVolumeElement`).
 `point_ids` is a length-4 vector/tuple of 1-based node indices into `mesh`
 (matching [`tetrahedra`](@ref)'s convention); `region` is the 1-based
 domain/material index the new element belongs to (matching
@@ -330,25 +330,25 @@ function add_volume_element!(m, point_ids; region::Integer=1)
     length(point_ids) == 4 || throw(ArgumentError(
         "add_volume_element!: point_ids must have exactly 4 entries (got $(length(point_ids)))"))
     region >= 1 || throw(ArgumentError("add_volume_element!: region must be >= 1 (got $region)"))
-    np = Internals.GetNP(m)
+    np = Netgen.GetNP(m)
     for pid in point_ids
         1 <= pid <= np || throw(ArgumentError(
             "add_volume_element!: point id $pid out of range 1:$np"))
     end
-    el = Internals.Element(4)
+    el = Netgen.Element(4)
     for (i, pid) in enumerate(point_ids)
-        Internals.SetPNum(el, i, Int(pid))
+        Netgen.SetPNum(el, i, Int(pid))
     end
-    Internals.SetIndex(el, Int(region))
-    Internals.AddVolumeElement(m, el)
+    Netgen.SetIndex(el, Int(region))
+    Netgen.AddVolumeElement(m, el)
     return m
 end
 
 """
     add_surface_element!(mesh, point_ids; region=1) -> mesh
 
-Add one boundary triangle to `mesh` (`Internals.Element2d` +
-`Internals.AddSurfaceElement`). `point_ids` is a length-3 vector/tuple of
+Add one boundary triangle to `mesh` (`Netgen.Element2d` +
+`Netgen.AddSurfaceElement`). `point_ids` is a length-3 vector/tuple of
 1-based node indices into `mesh` (matching [`surface_triangles`](@ref)'s
 convention); `region` is the 1-based face-descriptor index the new element
 belongs to (matching [`boundary_regions`](@ref)) — it must already exist
@@ -361,7 +361,7 @@ entry is not a valid 1-based index into `mesh`'s existing points, or if
 descriptors (`1:GetNFD(mesh)`).
 
 !!! warning "Do not skip the `region` check"
-    Unlike an out-of-range point id, calling `Internals.AddSurfaceElement`
+    Unlike an out-of-range point id, calling `Netgen.AddSurfaceElement`
     with a face-descriptor index that doesn't exist **segfaults the whole
     Julia process** rather than throwing a catchable exception (confirmed
     empirically — Netgen's own `has no facedecoding` internal check runs
@@ -373,22 +373,22 @@ descriptors (`1:GetNFD(mesh)`).
 function add_surface_element!(m, point_ids; region::Integer=1)
     length(point_ids) == 3 || throw(ArgumentError(
         "add_surface_element!: point_ids must have exactly 3 entries (got $(length(point_ids)))"))
-    nfd = Internals.GetNFD(m)
+    nfd = Netgen.GetNFD(m)
     1 <= region <= nfd || throw(ArgumentError(
         "add_surface_element!: region $region is not a valid face-descriptor index " *
         "(mesh has $nfd; add_surface_element! does not allocate new ones — " *
         "passing an invalid index would segfault the Netgen backend rather " *
         "than throw, so this is checked explicitly)"))
-    np = Internals.GetNP(m)
+    np = Netgen.GetNP(m)
     for pid in point_ids
         1 <= pid <= np || throw(ArgumentError(
             "add_surface_element!: point id $pid out of range 1:$np"))
     end
-    el = Internals.Element2d(3)
+    el = Netgen.Element2d(3)
     for (i, pid) in enumerate(point_ids)
-        Internals.SetPNum(el, i, Int(pid))
+        Netgen.SetPNum(el, i, Int(pid))
     end
-    Internals.SetIndex(el, Int(region))
-    Internals.AddSurfaceElement(m, el)
+    Netgen.SetIndex(el, Int(region))
+    Netgen.AddSurfaceElement(m, el)
     return m
 end

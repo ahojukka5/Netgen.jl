@@ -11,4 +11,4 @@ Delone.jl's own API). This is the stable interop path between CAD modeling
 and Netgen meshing.
 """
 occ_geometry_from_brep_string(brep::AbstractString) =
-    Internals.OCCGeometry_from_brep_string(String(brep))
+    Netgen.OCCGeometry_from_brep_string(String(brep))

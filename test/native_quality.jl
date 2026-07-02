@@ -14,7 +14,7 @@
     @test nq.overlapping_boundary isa Bool
     @test isempty(nq.warnings)
 
-    # Sanity-checked against Internals directly (native_quality is a thin,
+    # Sanity-checked against Netgen directly (native_quality is a thin,
     # maxh-invariant wrapper around CalcTotalBad/ElementError/Check*).
     mp = I.MeshingParameters()
     @test nq.total_bad ≈ I.CalcTotalBad(m, mp)

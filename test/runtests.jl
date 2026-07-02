@@ -1,5 +1,5 @@
 using Delone
-const I = Delone.Internals
+const I = Delone.Netgen
 using Test
 
 # Monge.jl (CAD modeling, package "Monge") is a test dependency (`Pkg.test()`).

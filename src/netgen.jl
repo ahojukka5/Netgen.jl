@@ -1,8 +1,8 @@
 # --- strict 1:1 CxxWrap bindings (not exported from Delone) -------------------
 # All Netgen/NGSolve C++ API names live here. The public Delone module composes them
-# into Julian helpers; advanced callers may use `Delone.Internals` directly.
+# into Julian helpers; advanced callers may use `Delone.Netgen` directly.
 
-module Internals
+module Netgen
 
 using CxxWrap
 using Libdl
@@ -24,4 +24,4 @@ function __init__()
     @initcxx
 end
 
-end # module Internals
+end # module Netgen

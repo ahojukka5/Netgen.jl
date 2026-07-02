@@ -113,7 +113,7 @@ end
 """Normalized `(point, h, radius, levels)` tuples for `opts.local_size`."""
 local_size_requests(opts::MeshOptions) = [_normalize_local_size_entry(e) for e in opts.local_size]
 
-"""Convert [`MeshOptions`](@ref) to a Netgen `MeshingParameters` object (via Internals)."""
+"""Convert [`MeshOptions`](@ref) to a Netgen `MeshingParameters` object (via Netgen)."""
 function to_meshing_parameters(opts::MeshOptions)
     validate_options!(opts)
     return meshing_parameters(;

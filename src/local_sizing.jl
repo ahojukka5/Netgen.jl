@@ -1,25 +1,25 @@
 # --- local mesh-size control -------------------------------------------------
 #
-# Julian front door over Netgen's local-h machinery (`Internals.LocalH`,
+# Julian front door over Netgen's local-h machinery (`Netgen.LocalH`,
 # `Mesh::GetH/SetGlobalH/SetMinimalH`). See the module docstring below for
 # what is and is not verified to influence `generate_mesh` in this build.
 #
 # VERIFIED (via standalone probing, see test/local_sizing.jl):
-#   - `Internals.new_localh(pmin, pmax, globalh)` / `SetH` / `GetH` / `GetMinH`
+#   - `Netgen.new_localh(pmin, pmax, globalh)` / `SetH` / `GetH` / `GetMinH`
 #     on a standalone `LocalH` field: fully works, independent of any mesh.
-#   - `Internals.GetH(mesh, point)`, `SetGlobalH(mesh, h)`, `SetMinimalH(mesh, h)`
+#   - `Netgen.GetH(mesh, point)`, `SetGlobalH(mesh, h)`, `SetMinimalH(mesh, h)`
 #     on an existing mesh: fully works (already exercised in test/mesh2.jl).
-#   - `Internals.RestrictLocalH(mesh, point, h)` and
-#     `Internals.SetLocalH(mesh, localh)`: the call succeeds and immediately
+#   - `Netgen.RestrictLocalH(mesh, point, h)` and
+#     `Netgen.SetLocalH(mesh, localh)`: the call succeeds and immediately
 #     updates `GetH(mesh, point)` to reflect the requested size — but this
 #     package's `GenerateMesh(geometry, mesh, meshingparameters)` entry point
 #     (the only OCC-geometry meshing path wrapped here) recomputes its own
 #     local-h field internally during surface meshing and DISCARDS any
 #     restriction applied beforehand. The identical behavior was confirmed for
-#     `Internals.LoadLocalMeshSize` (a `.msz` file loader — internally calls
+#     `Netgen.LoadLocalMeshSize` (a `.msz` file loader — internally calls
 #     `RestrictLocalH`). None of these three actually make `generate_mesh`
 #     produce smaller elements near a point in this build.
-#   - `Internals.OptimizeVolume` (a post-generation quality pass) does read the
+#   - `Netgen.OptimizeVolume` (a post-generation quality pass) does read the
 #     mesh's local-h field, but it only removes/flips elements to improve
 #     quality — it cannot ADD elements to reach a finer local target, so it is
 #     not a usable substitute for real local refinement either.
@@ -66,8 +66,8 @@
     LocalSizeField
 
 A standalone spatial mesh-size field, independent of any mesh. Wraps
-`Internals.new_localh` (a bounding box + a default/global size) plus any
-number of point-wise overrides applied via `Internals.SetH`.
+`Netgen.new_localh` (a bounding box + a default/global size) plus any
+number of point-wise overrides applied via `Netgen.SetH`.
 
 Useful for building a size specification before a mesh exists, or for
 querying/visualizing a target sizing independent of the mesher.
@@ -76,7 +76,7 @@ querying/visualizing a target sizing independent of the mesher.
 - `pmin`, `pmax`: the bounding box, `NTuple{3,Float64}`
 - `global_h`: the default/background mesh size
 - `refine_at`: the `(point, h)` overrides applied, in application order
-- `handle`: the underlying `Internals.LocalH` object (not part of the public
+- `handle`: the underlying `Netgen.LocalH` object (not part of the public
   data contract — use [`field_h`](@ref)/[`field_min_h`](@ref) to query it)
 """
 struct LocalSizeField
@@ -93,12 +93,12 @@ function Base.show(io::IO, f::LocalSizeField)
           ", refine_at=", length(f.refine_at), " points)")
 end
 
-_as_point3d(p::NTuple{3,<:Real}) = Internals.Point3d(Float64(p[1]), Float64(p[2]), Float64(p[3]))
+_as_point3d(p::NTuple{3,<:Real}) = Netgen.Point3d(Float64(p[1]), Float64(p[2]), Float64(p[3]))
 _as_point3d(p::AbstractVector{<:Real}) =
-    length(p) == 3 ? Internals.Point3d(Float64(p[1]), Float64(p[2]), Float64(p[3])) :
-    length(p) == 2 ? Internals.Point3d(Float64(p[1]), Float64(p[2]), 0.0) :
+    length(p) == 3 ? Netgen.Point3d(Float64(p[1]), Float64(p[2]), Float64(p[3])) :
+    length(p) == 2 ? Netgen.Point3d(Float64(p[1]), Float64(p[2]), 0.0) :
     throw(ArgumentError("point must have length 2 or 3 (got $(length(p)))"))
-_as_point3d(p::Tuple{<:Real,<:Real}) = Internals.Point3d(Float64(p[1]), Float64(p[2]), 0.0)
+_as_point3d(p::Tuple{<:Real,<:Real}) = Netgen.Point3d(Float64(p[1]), Float64(p[2]), 0.0)
 _as_ntuple3(p) = length(p) == 3 ? (Float64(p[1]), Float64(p[2]), Float64(p[3])) :
                  length(p) == 2 ? (Float64(p[1]), Float64(p[2]), 0.0) :
                  throw(ArgumentError("point must have length 2 or 3 (got $(length(p)))"))
@@ -110,16 +110,16 @@ Build a standalone [`LocalSizeField`](@ref) over the box `pmin..pmax` with
 background size `global_h`, applying `refine_at` as a list of `(point, h)`
 overrides (each `point` a length-2 or length-3 real vector/tuple; `h > 0`).
 
-`global_h` must be `> 0`. Overrides are applied in order via `Internals.SetH`;
+`global_h` must be `> 0`. Overrides are applied in order via `Netgen.SetH`;
 later overrides at the same location win.
 """
 function local_size_field(pmin, pmax, global_h::Real; refine_at=Tuple{Any,Float64}[])
     global_h > 0 || throw(ArgumentError("local_size_field: global_h must be > 0 (got $global_h)"))
-    handle = Internals.new_localh(_as_point3d(pmin), _as_point3d(pmax), Float64(global_h))
+    handle = Netgen.new_localh(_as_point3d(pmin), _as_point3d(pmax), Float64(global_h))
     applied = Tuple{NTuple{3,Float64},Float64}[]
     for (pt, h) in refine_at
         h > 0 || throw(ArgumentError("local_size_field: refine_at size must be > 0 (got $h at $pt)"))
-        Internals.SetH(handle, _as_point3d(pt), Float64(h))
+        Netgen.SetH(handle, _as_point3d(pt), Float64(h))
         push!(applied, (_as_ntuple3(pt), Float64(h)))
     end
     return LocalSizeField(_as_ntuple3(pmin), _as_ntuple3(pmax), Float64(global_h), applied, handle)
@@ -128,11 +128,11 @@ end
 """
     restrict_h!(field::LocalSizeField, point, h) -> field
 
-Override the mesh size at `point` to `h` (`Internals.SetH`). `h` must be `> 0`.
+Override the mesh size at `point` to `h` (`Netgen.SetH`). `h` must be `> 0`.
 """
 function restrict_h!(f::LocalSizeField, point, h::Real)
     h > 0 || throw(ArgumentError("restrict_h!: h must be > 0 (got $h)"))
-    Internals.SetH(f.handle, _as_point3d(point), Float64(h))
+    Netgen.SetH(f.handle, _as_point3d(point), Float64(h))
     push!(f.refine_at, (_as_ntuple3(point), Float64(h)))
     return f
 end
@@ -140,24 +140,24 @@ end
 """
     field_h(field::LocalSizeField, point) -> Float64
 
-Query the current size at `point` (`Internals.GetH`).
+Query the current size at `point` (`Netgen.GetH`).
 """
-field_h(f::LocalSizeField, point) = Internals.GetH(f.handle, _as_point3d(point))
+field_h(f::LocalSizeField, point) = Netgen.GetH(f.handle, _as_point3d(point))
 
 """
     field_min_h(field::LocalSizeField, pmin, pmax) -> Float64
 
-Minimum size over the box `pmin..pmax` (`Internals.GetMinH`).
+Minimum size over the box `pmin..pmax` (`Netgen.GetMinH`).
 """
 field_min_h(f::LocalSizeField, pmin, pmax) =
-    Internals.GetMinH(f.handle, _as_point3d(pmin), _as_point3d(pmax))
+    Netgen.GetMinH(f.handle, _as_point3d(pmin), _as_point3d(pmax))
 
 # --- mesh-level h-field operations -------------------------------------------
 
 """
     restrict_h!(mesh, point, h) -> mesh
 
-Best-effort local size annotation on an existing `mesh` (`Internals.RestrictLocalH`).
+Best-effort local size annotation on an existing `mesh` (`Netgen.RestrictLocalH`).
 Immediately visible to [`mesh_h_at`](@ref) queries and to post-generation passes
 that consult the mesh's local-h field (e.g. `optimize_volume!`), but — in this
 build — does **not** retroactively change element sizes produced by
@@ -168,7 +168,7 @@ during surface meshing. To actually get finer elements near a point, use
 """
 function restrict_h!(m, point, h::Real)
     h > 0 || throw(ArgumentError("restrict_h!: h must be > 0 (got $h)"))
-    Internals.RestrictLocalH(m, _as_point3d(point), Float64(h))
+    Netgen.RestrictLocalH(m, _as_point3d(point), Float64(h))
     return m
 end
 
@@ -197,36 +197,36 @@ end
 """
     mesh_h_at(mesh, point) -> Float64
 
-Current local-h field value at `point` (`Internals.GetH`). For a specific
+Current local-h field value at `point` (`Netgen.GetH`). For a specific
 existing mesh vertex by 1-based index, see [`mesh_h_at_point`](@ref).
 """
-mesh_h_at(m, point) = Internals.GetH(m, _as_point3d(point))
+mesh_h_at(m, point) = Netgen.GetH(m, _as_point3d(point))
 
 """
     set_global_h!(mesh, h) -> mesh
 
-Set the mesh's global/background target size (`Internals.SetGlobalH`). `h` must
+Set the mesh's global/background target size (`Netgen.SetGlobalH`). `h` must
 be `> 0`. Same caveat as [`restrict_h!`](@ref): in this build, does **not**
 retroactively change element sizes produced by [`generate_mesh`](@ref) — pass
 `maxh` to `generate_mesh`/`MeshOptions` for that instead.
 """
 function set_global_h!(m, h::Real)
     h > 0 || throw(ArgumentError("set_global_h!: h must be > 0 (got $h)"))
-    Internals.SetGlobalH(m, Float64(h))
+    Netgen.SetGlobalH(m, Float64(h))
     return m
 end
 
 """
     set_minimal_h!(mesh, h) -> mesh
 
-Set the mesh's minimum allowed size (`Internals.SetMinimalH`). `h` must be `> 0`.
+Set the mesh's minimum allowed size (`Netgen.SetMinimalH`). `h` must be `> 0`.
 Same caveat as [`restrict_h!`](@ref): in this build, does **not** retroactively
 change element sizes produced by [`generate_mesh`](@ref) — pass `minh` to
 `generate_mesh`/`MeshOptions` for that instead.
 """
 function set_minimal_h!(m, h::Real)
     h > 0 || throw(ArgumentError("set_minimal_h!: h must be > 0 (got $h)"))
-    Internals.SetMinimalH(m, Float64(h))
+    Netgen.SetMinimalH(m, Float64(h))
     return m
 end
 

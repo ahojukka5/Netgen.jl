@@ -1,7 +1,7 @@
 # mesh_from_arrays: building a mesh from plain point/connectivity arrays,
 # the inverse of points/tetrahedra/surface_triangles/cell_regions/boundary_regions.
 # See src/mesh_construction.jl for the reverse-engineered `.vol` grammar and
-# why direct Internals.Element construction is not viable.
+# why direct Netgen.Element construction is not viable.
 
 @testset "mesh_from_arrays: hand-built single tetrahedron" begin
     P = [0.0 1.0 0.0 0.0;
@@ -139,7 +139,7 @@ end
 
 @testset "add_surface_element! requires a pre-existing face descriptor" begin
     # A mesh with zero face descriptors: region=1 must be rejected with a
-    # clean ArgumentError, NOT passed through to Internals.AddSurfaceElement
+    # clean ArgumentError, NOT passed through to Netgen.AddSurfaceElement
     # (which segfaults on an unknown face-descriptor index -- see the
     # docstring's warning; this is the regression test for that).
     bare = I.new_mesh()

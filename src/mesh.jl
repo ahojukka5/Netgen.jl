@@ -1,4 +1,4 @@
-# --- mesh workflow (Julian helpers over Internals) --------------------------
+# --- mesh workflow (Julian helpers over Netgen) --------------------------
 # I/O, meshing parameters, introspection, topology refresh, and quality checks.
 
 """
@@ -15,13 +15,13 @@ function meshing_parameters(;
         secondorder::Bool=false,
         optsteps2d::Union{Nothing,Integer}=nothing,
         optsteps3d::Union{Nothing,Integer}=nothing)
-    mp = Internals.MeshingParameters()
-    Internals.maxh!(mp, Float64(maxh))
-    minh !== nothing && Internals.minh!(mp, Float64(minh))
-    grading !== nothing && Internals.grading!(mp, Float64(grading))
-    Internals.secondorder!(mp, secondorder)
-    optsteps2d !== nothing && Internals.optsteps2d!(mp, Int(optsteps2d))
-    optsteps3d !== nothing && Internals.optsteps3d!(mp, Int(optsteps3d))
+    mp = Netgen.MeshingParameters()
+    Netgen.maxh!(mp, Float64(maxh))
+    minh !== nothing && Netgen.minh!(mp, Float64(minh))
+    grading !== nothing && Netgen.grading!(mp, Float64(grading))
+    Netgen.secondorder!(mp, secondorder)
+    optsteps2d !== nothing && Netgen.optsteps2d!(mp, Int(optsteps2d))
+    optsteps3d !== nothing && Netgen.optsteps3d!(mp, Int(optsteps3d))
     return mp
 end
 
@@ -31,7 +31,7 @@ end
 Write `mesh` to Netgen volume format (`Mesh::Save`).
 """
 function save_mesh(m, path::AbstractString)
-    Internals.Save(m, String(path))
+    Netgen.Save(m, String(path))
     return m
 end
 
@@ -41,25 +41,25 @@ end
 Read a mesh from Netgen volume format (`Mesh::Load`).
 """
 function load_mesh(path::AbstractString)
-    m = Internals.new_mesh()
-    Internals.Load(m, String(path))
+    m = Netgen.new_mesh()
+    Netgen.Load(m, String(path))
     return m
 end
 
 """num_nodes(mesh) -> number of mesh nodes."""
-num_nodes(m) = Internals.GetNP(m)
+num_nodes(m) = Netgen.GetNP(m)
 
 """num_cells(mesh) -> number of top-dimensional cells (tets in 3D, triangles in 2D)."""
 num_cells(m) = _ncells(m)
 
 """num_boundary_facets(mesh) -> boundary triangles in 3D, segments in 2D."""
 function num_boundary_facets(m)
-    d = Internals.GetDimension(m)
-    return d == 3 ? Internals.GetNSE(m) : Internals.GetNSeg(m)
+    d = Netgen.GetDimension(m)
+    return d == 3 ? Netgen.GetNSE(m) : Netgen.GetNSeg(m)
 end
 
 """mesh_dimension(mesh) -> topological dimension (2 or 3)."""
-mesh_dimension(m) = Int(Internals.GetDimension(m))
+mesh_dimension(m) = Int(Netgen.GetDimension(m))
 
 """
     connectivity(mesh) -> (volume=..., surface=...)
@@ -83,7 +83,7 @@ end
 
 """update_topology!(mesh) -> mesh, refresh edge/face topology tables."""
 function update_topology!(m)
-    Internals.UpdateTopology(m)
+    Netgen.UpdateTopology(m)
     return m
 end
 
@@ -95,8 +95,8 @@ field is `true` when the corresponding `CheckVolumeMesh` / `CheckConsistentBound
 call returns `0`.
 """
 function check_mesh(m)
-    vol = Internals.CheckVolumeMesh(m) == 0
-    bnd = Internals.CheckConsistentBoundary(m) == 0
+    vol = Netgen.CheckVolumeMesh(m) == 0
+    bnd = Netgen.CheckConsistentBoundary(m) == 0
     return (volume_ok=vol, boundary_ok=bnd)
 end
 
@@ -107,7 +107,7 @@ Improve mesh quality in place (`Mesh::ImproveMesh`) using [`meshing_parameters`]
 """
 function improve_mesh!(m; maxh::Real, kwargs...)
     mp = meshing_parameters(; maxh=maxh, kwargs...)
-    Internals.ImproveMesh(m, mp)
+    Netgen.ImproveMesh(m, mp)
     return m
 end
 
@@ -126,12 +126,12 @@ related constants) is still recoverable via `.status`.
 """
 function optimize_volume!(m; maxh::Real, throw_on_error::Bool=true, kwargs...)
     mp = meshing_parameters(; maxh=maxh, kwargs...)
-    status = Internals.MeshVolume(mp, m)
+    status = Netgen.MeshVolume(mp, m)
     if status != MESHING3_OK
         throw_on_error && throw(ErrorException("MeshVolume failed with status $status"))
         return (mesh=m, status=status)
     end
-    status = Internals.OptimizeVolume(mp, m)
+    status = Netgen.OptimizeVolume(mp, m)
     if status != MESHING3_OK
         throw_on_error && throw(ErrorException("OptimizeVolume failed with status $status"))
         return (mesh=m, status=status)
@@ -147,13 +147,13 @@ Axis-aligned bounding box from `Mesh::GetBox`, returned as a `NamedTuple`
 plain 3-tuple of coordinates.
 """
 function mesh_bounding_box(m)
-    b = Internals.GetBox(m)
-    return (min=(Internals.MinX(b), Internals.MinY(b), Internals.MinZ(b)),
-            max=(Internals.MaxX(b), Internals.MaxY(b), Internals.MaxZ(b)))
+    b = Netgen.GetBox(m)
+    return (min=(Netgen.MinX(b), Netgen.MinY(b), Netgen.MinZ(b)),
+            max=(Netgen.MaxX(b), Netgen.MaxY(b), Netgen.MaxZ(b)))
 end
 
 """compress!(mesh) -> mesh, remove unused mesh points in place."""
 function compress!(m)
-    Internals.Compress(m)
+    Netgen.Compress(m)
     return m
 end

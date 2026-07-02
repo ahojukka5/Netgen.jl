@@ -7,7 +7,7 @@ top of **Netgen/NGSolve**, a mature and powerful open-source meshing
 technology — Delone.jl does not replace Netgen; it provides a Julian,
 simulation-oriented, agent-friendly layer above it.
 
-Raw Netgen/NGSolve C++ bindings live in [`Internals`](@ref) (`Delone.Internals`)
+Raw Netgen/NGSolve C++ bindings live in [`Netgen`](@ref) (`Delone.Netgen`)
 — strict 1:1 names from `NetgenCxxWrap_jll` — for advanced users and backend
 development. Most users and LLM agents should use the high-level exported API:
 composition, 1-based ids, sessions, snapshots, and structured meshing/hierarchy
@@ -15,7 +15,7 @@ reports for downstream solvers (e.g. Oodi.jl) and LLM-driven workflows.
 """
 module Delone
 
-import OCCT_jll  # load before Internals.__init__ runs @initcxx (BREP bridge)
+import OCCT_jll  # load before Netgen.__init__ runs @initcxx (BREP bridge)
 
 # `report`/`validate`/`readiness`/`to_namedtuple` and their base marker/report
 # types are owned by OodiCore, the shared Oodi-ecosystem introspection contract
@@ -28,7 +28,7 @@ import OCCT_jll  # load before Internals.__init__ runs @initcxx (BREP bridge)
 using OodiCore
 import OodiCore: report, validate, readiness, to_namedtuple
 
-include("internals.jl")
+include("netgen.jl")
 include("constants.jl")
 include("diagnostics.jl")
 include("geometry.jl")

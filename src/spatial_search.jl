@@ -1,6 +1,6 @@
 # --- spatial node search -----------------------------------------------------
 #
-# A small `NodeTree` wrapper over `Internals.Point3dTree`
+# A small `NodeTree` wrapper over `Netgen.Point3dTree`
 # (`new_point3dtree`/`Insert`/`GetIntersecting`, already proven in
 # test/gprim.jl) for region-based node queries. Pairs naturally with
 # `local_sizing.jl`'s `refine_near!`, which currently does an O(n) linear scan
@@ -12,7 +12,7 @@
 """
     NodeTree
 
-Spatial index over a 3D point cloud, wrapping `Internals.Point3dTree` for
+Spatial index over a 3D point cloud, wrapping `Netgen.Point3dTree` for
 fast axis-aligned-box queries. Node ids returned by [`nodes_near`](@ref) are
 1-based column indices into the `points` field (matching
 [`points`](@ref)`(mesh)`'s convention when built via [`build_node_tree`](@ref)).
@@ -22,7 +22,7 @@ fast axis-aligned-box queries. Node ids returned by [`nodes_near`](@ref) are
   slightly beyond the input point cloud's extent.
 - `points`: the indexed points, `3×n` `Matrix{Float64}` (2D input is stored
   with a zero third row).
-- `handle`: the underlying `Internals.Point3dTree` (not part of the public
+- `handle`: the underlying `Netgen.Point3dTree` (not part of the public
   data contract -- use [`nodes_near`](@ref) to query it).
 """
 struct NodeTree
@@ -47,7 +47,7 @@ indices into `points`.
 `margin` pads the tree's bounding box beyond the point cloud's extent
 (absolute units); it defaults to `max(1e-3 * bounding_box_diagonal, 1e-9)` so
 points exactly on the cloud's extreme faces are not dropped by
-`Internals.GetIntersecting`'s box test. `points` must have at least one
+`Netgen.GetIntersecting`'s box test. `points` must have at least one
 column.
 """
 function node_tree(P::AbstractMatrix{<:Real}; margin::Union{Nothing,Real}=nothing)
@@ -63,9 +63,9 @@ function node_tree(P::AbstractMatrix{<:Real}; margin::Union{Nothing,Real}=nothin
     margin !== nothing && margin < 0 && throw(ArgumentError("node_tree: margin must be >= 0 (got $margin)"))
     pmin = (lo[1] - pad, lo[2] - pad, lo[3] - pad)
     pmax = (hi[1] + pad, hi[2] + pad, hi[3] + pad)
-    handle = Internals.new_point3dtree(_as_point3d(pmin), _as_point3d(pmax))
+    handle = Netgen.new_point3dtree(_as_point3d(pmin), _as_point3d(pmax))
     for j in 1:n
-        Internals.Insert(handle, _as_point3d((P3[1, j], P3[2, j], P3[3, j])), j)
+        Netgen.Insert(handle, _as_point3d((P3[1, j], P3[2, j], P3[3, j])), j)
     end
     return NodeTree(pmin, pmax, P3, handle)
 end
@@ -82,7 +82,7 @@ build_node_tree(m; margin::Union{Nothing,Real}=nothing) = node_tree(points(m); m
     nodes_near(tree::NodeTree, point, radius) -> Vector{Int}
 
 1-based node ids within Euclidean `radius` of `point` (length-2 or length-3
-real vector/tuple). Queries `Internals.GetIntersecting` over the axis-aligned
+real vector/tuple). Queries `Netgen.GetIntersecting` over the axis-aligned
 box `point .- radius .. point .+ radius` (`Point3dTree` only supports
 box-intersection queries), then filters the box hits down to the exact
 Euclidean ball using `tree.points`. `radius` must be `> 0`.
@@ -92,7 +92,7 @@ function nodes_near(tree::NodeTree, point, radius::Real)
     c = _as_ntuple3(point)
     boxmin = (c[1] - radius, c[2] - radius, c[3] - radius)
     boxmax = (c[1] + radius, c[2] + radius, c[3] + radius)
-    hits = Internals.GetIntersecting(tree.handle, _as_point3d(boxmin), _as_point3d(boxmax))
+    hits = Netgen.GetIntersecting(tree.handle, _as_point3d(boxmin), _as_point3d(boxmax))
     r2 = radius^2
     out = Int[]
     for h in hits

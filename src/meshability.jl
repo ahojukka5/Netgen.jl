@@ -4,7 +4,7 @@
 # `Mesh::FindOpenSegments` are the natural native check ("N open boundary
 # elements"), but they were investigated and found not to be wireable into a
 # count today — they populate internal C++ arrays (`GetNOpenElements()`,
-# `GetNOpenSegments()`) that are not exposed through the current `Internals`
+# `GetNOpenSegments()`) that are not exposed through the current `Netgen`
 # CxxWrap bindings, and their only Julia-visible side effect is a suppressed
 # (verbosity-5) PrintMessage, not a stable value. See `NativeQualityReport`'s
 # docstring in quality.jl for the full writeup. Exposing them for real needs

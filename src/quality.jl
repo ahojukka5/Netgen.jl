@@ -20,7 +20,7 @@ Two distinct provenances are embedded here — don't confuse them:
 - Fields prefixed `netgen_...` are **native Netgen diagnostics**, calling
   straight into Netgen's own C++ quality/topology kernel (`Mesh::CalcTotalBad`,
   `Mesh::ElementError`, `Mesh::CheckVolumeMesh`, `Mesh::CheckOverlappingBoundary`
-  via `Internals`). They use Netgen's own tet-badness functional (normalized
+  via `Netgen`). They use Netgen's own tet-badness functional (normalized
   so a perfect/equilateral tet scores `1.0`; larger is worse — this is the
   *opposite* sense from the Julia `*_quality` fields above, where `1.0` is
   best and `0.0` is worst — do not compare the two scales directly).
@@ -127,7 +127,7 @@ end
     NativeQualityReport
 
 Native Netgen quality/topology diagnostics for a volume (3D) mesh, computed
-entirely by calls into Netgen's own C++ kernel via `Internals` — no Julia-side
+entirely by calls into Netgen's own C++ kernel via `Netgen` — no Julia-side
 geometry recomputation. See [`native_quality`](@ref).
 
 Netgen's tet-badness functional (`CalcTetBadness`, exposed here via
@@ -245,22 +245,22 @@ function native_quality(m)
             warnings)
     end
 
-    ne = Internals.GetNE(m)
-    mp = Internals.MeshingParameters()
+    ne = Netgen.GetNE(m)
+    mp = Netgen.MeshingParameters()
     if ne == 0
         _append!(warnings, :warning, :empty_mesh, "no volume elements to measure")
         return NativeQualityReport(0.0, NaN, NaN, NaN, true, true, false, 0, 0, warnings)
     end
 
-    total_bad = Internals.CalcTotalBad(m, mp)
-    errs = [Internals.ElementError(m, i, mp) for i in 1:ne]
-    vol_ok = Internals.CheckVolumeMesh(m) == 0
-    bnd_ok = Internals.CheckConsistentBoundary(m) == 0
-    overlap = Internals.CheckOverlappingBoundary(m) != 0
-    Internals.FindOpenElements(m, 0)
-    open_elements = Internals.GetNOpenElements(m)
-    Internals.FindOpenSegments(m, 0)
-    open_segments = Internals.GetNOpenSegments(m)
+    total_bad = Netgen.CalcTotalBad(m, mp)
+    errs = [Netgen.ElementError(m, i, mp) for i in 1:ne]
+    vol_ok = Netgen.CheckVolumeMesh(m) == 0
+    bnd_ok = Netgen.CheckConsistentBoundary(m) == 0
+    overlap = Netgen.CheckOverlappingBoundary(m) != 0
+    Netgen.FindOpenElements(m, 0)
+    open_elements = Netgen.GetNOpenElements(m)
+    Netgen.FindOpenSegments(m, 0)
+    open_segments = Netgen.GetNOpenSegments(m)
 
     return NativeQualityReport(
         total_bad,

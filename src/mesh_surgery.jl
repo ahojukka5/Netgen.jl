@@ -12,12 +12,12 @@
     split_to_tets!(mesh) -> mesh
 
 Convert any PRISM elements in `mesh` into tetrahedra, in place
-(`Internals.Split2Tets`).
+(`Netgen.Split2Tets`).
 
 Netgen's OCC volume mesher used by [`generate_mesh`](@ref) in this package
 only ever produces pure tetrahedral meshes (no prisms/pyramids) in this build,
 so on a `generate_mesh`-built mesh this was verified to be a safe no-op:
-element count, per-element type (`Internals.GetType`), and
+element count, per-element type (`Netgen.GetType`), and
 [`pure_tet_mesh`](@ref) were all unchanged after calling it on the
 `frame.step` fixture. It exists here for meshes that do contain prism
 elements (e.g. hand-built or imported with extrusion); that actual
@@ -26,7 +26,7 @@ verification since this build has no supported way to *produce* a prism in
 the first place.
 """
 function split_to_tets!(m)
-    Internals.Split2Tets(m)
+    Netgen.Split2Tets(m)
     return m
 end
 
@@ -34,14 +34,14 @@ end
     split_into_parts!(mesh) -> mesh
 
 Renumber `mesh`'s volume and surface elements by connected component
-(`Internals.SplitIntoParts`): elements transitively reachable from one
+(`Netgen.SplitIntoParts`): elements transitively reachable from one
 another via shared mesh points get the same new 1-based region id, replacing
 whatever region ids were assigned before.
 
 !!! warning "Destructive to existing boundary/material names"
     Verified on the `frame.step` fixture (a single connected solid): calling
     this collapsed the mesh's 375 distinct named boundary face descriptors
-    down to just 2 generic entries (`Internals.GetNFD` 375 -> 2, and every
+    down to just 2 generic entries (`Netgen.GetNFD` 375 -> 2, and every
     surviving entry in [`boundary_names`](@ref)/[`material_names`](@ref)
     read back as the generic `"default"`) -- **any boundary-condition or
     material names set before calling this are lost.** Only the volume
@@ -49,7 +49,7 @@ whatever region ids were assigned before.
     topological information; on `frame.step` all volume tets stayed a single
     connected part (`cell_regions` unique value `[1]`, unchanged) even though
     Netgen detected 2 separate point-connected components at the *surface*
-    level (`Internals.GetNFD` went to 2) -- yet after the call
+    level (`Netgen.GetNFD` went to 2) -- yet after the call
     [`boundary_regions`](@ref) (which face descriptor each boundary triangle
     actually points at) was *still* uniformly `[1]`, i.e. the second
     face-descriptor slot Netgen allocated was not referenced by any surface
@@ -59,7 +59,7 @@ whatever region ids were assigned before.
     you depend on them.
 """
 function split_into_parts!(m)
-    Internals.SplitIntoParts(m)
+    Netgen.SplitIntoParts(m)
     return m
 end
 
@@ -67,7 +67,7 @@ end
     merge_mesh_file!(mesh, path::AbstractString) -> mesh
 
 Append another Netgen-format mesh **file** at `path` into `mesh`, in place
-(`Internals.Merge`). This is *not* an in-memory merge of two `Delone` mesh
+(`Netgen.Merge`). This is *not* an in-memory merge of two `Delone` mesh
 handles -- `path` must be a file on disk, typically one previously written
 with [`save_mesh`](@ref). Point ids and domain/material indices read from the
 file are offset by `mesh`'s current point/domain counts before appending, so
@@ -75,9 +75,9 @@ they do not collide with `mesh`'s existing content.
 
 Verified on the `frame.step` fixture (save a generated mesh to a `.vol` file,
 then merge that same file into a freshly-loaded copy of itself): `num_nodes`
-and the volume-element count (`Internals.GetNE`) both **exactly doubled**, as
+and the volume-element count (`Netgen.GetNE`) both **exactly doubled**, as
 expected for appending a full copy. Surprisingly, in this build,
-`Internals.GetNSE` (boundary triangles) and `Internals.GetNSeg` (edge
+`Netgen.GetNSE` (boundary triangles) and `Netgen.GetNSeg` (edge
 segments) did **not** change, even though the saved `.vol` file does contain
 non-empty `"surfaceelements"`/`"edgesegmentsgi3"` sections and the reviewed
 Netgen source (`Mesh::Merge`, `meshclass.cpp`) reads and appends them; calling
@@ -99,7 +99,7 @@ than a wrapper that quietly does less than its name implies.
 """
 function merge_mesh_file!(m, path::AbstractString)
     isfile(path) || throw(ArgumentError("merge_mesh_file!: file not found: $path"))
-    Internals.Merge(m, String(path))
+    Netgen.Merge(m, String(path))
     return m
 end
 
@@ -108,7 +108,7 @@ end
 
 Extract a new mesh containing only the elements whose region matches
 `domains`/`faces`, compressing away points no longer referenced by any kept
-element (`Internals.GetSubMesh`).
+element (`Netgen.GetSubMesh`).
 
 !!! note "`domains`/`faces` are regexes over *names*, not index ranges"
     Confirmed by reading the Netgen source (`Mesh::GetSubMesh`,
@@ -134,30 +134,30 @@ element (`Internals.GetSubMesh`).
     name, or escape/compose a real regex for anything fancier.
 """
 function get_sub_mesh(m, domains::AbstractString, faces::AbstractString="")
-    return Internals.GetSubMesh(m, String(domains), String(faces))
+    return Netgen.GetSubMesh(m, String(domains), String(faces))
 end
 
 """
     pure_tet_mesh(mesh) -> Bool
 
-Whether every volume element in `mesh` is a tetrahedron (`Internals.PureTetMesh`).
+Whether every volume element in `mesh` is a tetrahedron (`Netgen.PureTetMesh`).
 """
-pure_tet_mesh(m) = Internals.PureTetMesh(m)
+pure_tet_mesh(m) = Netgen.PureTetMesh(m)
 
 """
     pure_trig_mesh(mesh, domain::Integer) -> Bool
 
 Whether every surface element belonging to face index `domain` is a triangle
-rather than a quad (`Internals.PureTrigMesh`). Per the Netgen source, `domain
+rather than a quad (`Netgen.PureTrigMesh`). Per the Netgen source, `domain
 = 0` checks the *whole* surface mesh instead of a single face.
 """
-pure_trig_mesh(m, domain::Integer) = Internals.PureTrigMesh(m, Int(domain))
+pure_trig_mesh(m, domain::Integer) = Netgen.PureTrigMesh(m, Int(domain))
 
 """
     surface_mesh_orientation!(mesh) -> mesh
 
 Re-orient `mesh`'s surface triangles to be mutually consistent
-(`Internals.SurfaceMeshOrientation`): treats surface element 1 as the
+(`Netgen.SurfaceMeshOrientation`): treats surface element 1 as the
 reference orientation and flips any other triangle whose shared-edge winding
 with its already-visited neighbors implies the opposite orientation,
 propagating across the whole surface mesh (a disconnected surface component
@@ -167,7 +167,7 @@ components).
 
 Verified idempotent on an already consistently-oriented mesh: calling it on a
 fresh `frame.step` mesh left [`surface_triangles`](@ref) bit-for-bit
-unchanged. This build's `Internals` bindings do not expose a way to
+unchanged. This build's `Netgen` bindings do not expose a way to
 construct or reassign an `Element2d`'s point order from Julia (no `Element2d`
 constructor or `PNum` setter is wrapped), so deliberately flipping a triangle
 to exercise the actual repair path end-to-end was not possible here; the
@@ -176,6 +176,6 @@ to exercise the actual repair path end-to-end was not possible here; the
 reproduced by a passing/failing test in this verification.
 """
 function surface_mesh_orientation!(m)
-    Internals.SurfaceMeshOrientation(m)
+    Netgen.SurfaceMeshOrientation(m)
     return m
 end

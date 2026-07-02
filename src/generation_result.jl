@@ -189,15 +189,15 @@ function generate_mesh_result(geom, opts::MeshOptions)
 
     local m
     try
-        m = Internals.new_mesh()
-        # `Internals.SetGeometry` only accepts `NetgenGeometry` (OCC/2D geometry).
+        m = Netgen.new_mesh()
+        # `Netgen.SetGeometry` only accepts `NetgenGeometry` (OCC/2D geometry).
         # `STLGeometry` has no such overload — `hasmethod` skips it rather than
         # hardcoding a type check, so any future geometry kind without a
         # `SetGeometry` overload degrades the same way instead of throwing.
-        hasmethod(Internals.SetGeometry, Tuple{typeof(m), typeof(geom)}) &&
-            Internals.SetGeometry(m, geom)
+        hasmethod(Netgen.SetGeometry, Tuple{typeof(m), typeof(geom)}) &&
+            Netgen.SetGeometry(m, geom)
         mp = to_meshing_parameters(opts)
-        Internals.GenerateMesh(geom, m, mp)
+        Netgen.GenerateMesh(geom, m, mp)
     catch e
         _classify_exception(e, diag)
         return MeshGenerationResult(false, nothing, opts, diag, time() - t0, warnings)
@@ -232,7 +232,7 @@ function generate_mesh_result(geom, opts::MeshOptions)
 
     if opts.optimize && mesh_dimension(m) == 3
         mp = to_meshing_parameters(opts)
-        status = Internals.MeshVolume(mp, m)
+        status = Netgen.MeshVolume(mp, m)
         if status != MESHING3_OK
             diag.failure_stage = get(_MESHING3_STAGE, status, :optimization)
             diag.backend_status = status
@@ -240,7 +240,7 @@ function generate_mesh_result(geom, opts::MeshOptions)
             append!(diag.suggestions, _suggest_for_status(status, opts))
             return MeshGenerationResult(false, m, opts, diag, time() - t0, warnings)
         end
-        status = Internals.OptimizeVolume(mp, m)
+        status = Netgen.OptimizeVolume(mp, m)
         if status != MESHING3_OK
             diag.failure_stage = get(_MESHING3_STAGE, status, :optimization)
             diag.backend_status = status

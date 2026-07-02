@@ -8,7 +8,7 @@ calls). This is **not** the same as [`nlevels`](@ref), which counts the
 logical levels of a [`MeshHierarchy`](@ref) or `MeshHierarchySession` built by
 this package.
 """
-num_levels(m) = Internals.GetNLevels(Internals.Ngx_Mesh(m))
+num_levels(m) = Netgen.GetNLevels(Netgen.Ngx_Mesh(m))
 
 """
     level_nvertices(mesh, level) -> Int
@@ -17,7 +17,7 @@ Number of vertices Netgen's C++ `Ngx_Mesh` reports for the given 0-based ngx
 `level` of this single mesh object (raw ngx accessor, see [`num_levels`](@ref)).
 """
 level_nvertices(m, level::Integer) =
-    Internals.GetNVLevel(Internals.Ngx_Mesh(m), Int(level))
+    Netgen.GetNVLevel(Netgen.Ngx_Mesh(m), Int(level))
 
 _ngx_to_1based(v::Integer) = Int32(v) + Int32(1)
 
@@ -28,12 +28,12 @@ For each 1-based vertex, its two coarse-level parent vertices. `(0, 0)` marks an
 inherited coarse vertex.
 """
 function parent_nodes(m)
-    nm = Internals.Ngx_Mesh(m)
-    np = Internals.GetNP(m)
+    nm = Netgen.Ngx_Mesh(m)
+    np = Netgen.GetNP(m)
     P = Matrix{Int32}(undef, 2, np)
     buf = zeros(Cint, 2)
     for i in 1:np
-        Internals.GetParentNodes(nm, i - 1, buf)
+        Netgen.GetParentNodes(nm, i - 1, buf)
         P[1, i] = _ngx_to_1based(buf[1]); P[2, i] = _ngx_to_1based(buf[2])
     end
     return P
@@ -41,22 +41,22 @@ end
 
 """parent_elements(mesh) -> Vector{Int32}, 1-based parent per volume cell (`0` = none)."""
 function parent_elements(m)
-    nm = Internals.Ngx_Mesh(m)
-    ne = Internals.GetNE(m)
-    return Int32[_ngx_to_1based(Internals.GetParentElement(nm, i - 1)) for i in 1:ne]
+    nm = Netgen.Ngx_Mesh(m)
+    ne = Netgen.GetNE(m)
+    return Int32[_ngx_to_1based(Netgen.GetParentElement(nm, i - 1)) for i in 1:ne]
 end
 
 """parent_surface_elements(mesh) -> Vector{Int32}, 1-based parent per surface facet."""
 function parent_surface_elements(m)
-    nm = Internals.Ngx_Mesh(m)
-    nse = Internals.GetNSE(m)
-    return Int32[_ngx_to_1based(Internals.GetParentSElement(nm, i - 1)) for i in 1:nse]
+    nm = Netgen.Ngx_Mesh(m)
+    nse = Netgen.GetNSE(m)
+    return Int32[_ngx_to_1based(Netgen.GetParentSElement(nm, i - 1)) for i in 1:nse]
 end
 
 """copy_mesh(mesh) -> deep copy with no refinement history."""
 function copy_mesh(src)
-    m = Internals.new_mesh()
-    Internals.assign(m, src)
+    m = Netgen.new_mesh()
+    Netgen.assign(m, src)
     return m
 end
 
