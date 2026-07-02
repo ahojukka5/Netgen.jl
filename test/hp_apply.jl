@@ -61,12 +61,41 @@ end
     m = generate_mesh(geom; maxh=40.0)
     @test !hp_clusters_available(m)
     @test_throws ArgumentError cluster_rep_vertices(m)
+    @test_throws ArgumentError cluster_rep_elements(m)
+    @test_throws ArgumentError cluster_rep_edge(m, 1)
+    @test_throws ArgumentError cluster_rep_face(m, 1)
     hp_refine!(m; levels=1)
     @test hp_clusters_available(m)
     crv = cluster_rep_vertices(m)
     @test length(crv) == I.GetNP(m)
     cre = cluster_rep_elements(m)
     @test length(cre) == I.GetNE(m)
+end
+
+@testset "hp.jl ArgumentError branches: length checks, dimension guards, bad reftype" begin
+    geom = load_step(STEP)
+    m = generate_mesh(geom; maxh=40.0)
+    ne = I.GetNE(m)
+
+    # set_element_orders!(mesh, orders): wrong length
+    @test_throws ArgumentError set_element_orders!(m, fill(1, ne + 1))
+
+    # set_surface_element_order!/orders! are 3D-only -> ArgumentError on a 2D mesh
+    disk = Circle(0.0, 0.0, 1.0, "disk", "circle")
+    m2 = generate_mesh(geometry2d(disk); maxh=0.4)
+    @test_throws ArgumentError set_surface_element_order!(m2, 1, 2)
+    @test_throws ArgumentError set_surface_element_orders!(m2, 1, 2, 2)
+    @test_throws ArgumentError set_surface_element_orders!(m2, [1, 2])
+
+    # set_surface_element_orders!(mesh, orders): wrong length (3D mesh)
+    nse = I.GetNSE(m)
+    @test_throws ArgumentError set_surface_element_orders!(m, fill(1, nse + 1))
+
+    # mark_for_ngx_refinement!: wrong length
+    @test_throws ArgumentError mark_for_ngx_refinement!(m, falses(ne + 1))
+
+    # ngx_refine!: reftype must be NG_REFINE_H/P/HP
+    @test_throws ArgumentError ngx_refine!(m; reftype=999)
 end
 
 @testset "session hp apply (in-place, generation tracking)" begin

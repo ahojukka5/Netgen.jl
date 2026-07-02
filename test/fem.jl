@@ -24,6 +24,41 @@ end
     @test size(J) == (3, 2)
 end
 
+@testset "fem.jl ArgumentError branches: xi-length and dimension checks" begin
+    geom = load_step(STEP)
+    m3 = generate_mesh(geom; maxh=40.0)
+    make_second_order!(m3)
+    # volume_element_transformation requires xi of length 3
+    @test_throws ArgumentError volume_element_transformation(m3, 1, [0.0, 0.0])
+    # surface_element_transformation requires xi of length 2 (3D mesh)
+    @test_throws ArgumentError surface_element_transformation(m3, 1, [0.0, 0.0, 0.0])
+    # volume_element_transformations requires xis to be 3×npts
+    @test_throws ArgumentError volume_element_transformations(m3, 1, [0.0 0.5; 0.0 0.0])
+    # find_element requires x of length >= 3 for a 3D mesh
+    @test_throws ArgumentError find_element(m3, [0.0, 0.0])
+    # segment_element_transformation requires xi of length 1
+    @test_throws ArgumentError segment_element_transformation(m3, 1, [0.0, 0.0])
+    # material_codim_name: codim must be 0-3
+    @test_throws ArgumentError material_codim_name(m3, 4, 1)
+    # parent_edges/parent_faces before any topology table is enabled
+    m3b = generate_mesh(geom; maxh=40.0)
+    @test !has_parent_edges(m3b)
+    @test_throws ArgumentError parent_edges(m3b, 1)
+    @test_throws ArgumentError parent_faces(m3b, 1)
+
+    disk = Circle(0.0, 0.0, 1.0, "disk", "circle")
+    m2 = generate_mesh(geometry2d(disk); maxh=0.4)
+    make_second_order!(m2)
+    # find_element requires x of length >= 2 for a 2D mesh
+    @test_throws ArgumentError find_element(m2, [0.0])
+    # domain_element_transformation is 2D only -> ArgumentError on a 3D mesh
+    @test_throws ArgumentError domain_element_transformation(m3, 1, [0.0, 0.0])
+    # domain_element_transformation requires xi of length 2 (2D mesh)
+    @test_throws ArgumentError domain_element_transformation(m2, 1, [0.0])
+    # surface_element_transformation is 3D only -> ArgumentError on a 2D mesh
+    @test_throws ArgumentError surface_element_transformation(m2, 1, [0.0, 0.0])
+end
+
 @testset "parent edge/face maps (EnableTopologyTable + refine)" begin
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)

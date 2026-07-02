@@ -8,6 +8,25 @@
     @test_throws ArgumentError validate_options!(MeshOptions(maxh=1.0, minh=2.0))
 end
 
+@testset "MeshOptions validation: remaining ArgumentError branches (options.jl)" begin
+    # minh <= 0 (distinct from the minh > maxh branch above)
+    @test_throws ArgumentError validate_options!(MeshOptions(maxh=1.0, minh=-0.5))
+    # grading < 0
+    @test_throws ArgumentError validate_options!(MeshOptions(maxh=1.0, grading=-0.1))
+    # dimension not in (2, 3)
+    @test_throws ArgumentError validate_options!(MeshOptions(maxh=1.0, dimension=4))
+    # local_size entry: unsupported type (neither NamedTuple nor length>=2 Tuple)
+    @test_throws ArgumentError validate_options!(MeshOptions(maxh=1.0, local_size=Any[5]))
+    # local_size entry: NamedTuple missing `point`
+    @test_throws ArgumentError validate_options!(MeshOptions(maxh=1.0, local_size=Any[(h=1.0,)]))
+    # local_size entry: radius <= 0
+    @test_throws ArgumentError validate_options!(
+        MeshOptions(maxh=1.0, local_size=Any[(point=(0.0, 0.0, 0.0), h=1.0, radius=-1.0)]))
+    # local_size entry: levels < 1
+    @test_throws ArgumentError validate_options!(
+        MeshOptions(maxh=1.0, local_size=Any[(point=(0.0, 0.0, 0.0), h=1.0, levels=0)]))
+end
+
 @testset "generate_mesh structured result (3D STEP)" begin
     geom = load_step(STEP)
     opts = MeshOptions(maxh=40.0, grading=0.3)
@@ -84,6 +103,29 @@ end
     @test length(string(hr)) > 20
 end
 
+@testset "refine!/refine_session! ArgumentError branches (refinement_result.jl)" begin
+    geom = load_step(STEP)
+    h = mesh_hierarchy(geom; maxh=40.0, levels=1)
+    @test_throws ArgumentError refine!(h; mode=:marked)  # marked_elements required for :marked
+    @test_throws ArgumentError refine!(h; mode=:bogus)   # unsupported mode
+
+    s = mesh_session(geom; maxh=40.0)
+    @test_throws ArgumentError refine_session!(s; mode=:marked)
+    @test_throws ArgumentError refine_session!(s; mode=:bogus)
+end
+
+@testset "level_report/transfer_report ArgumentError branches (hierarchy_report.jl)" begin
+    geom = load_step(STEP)
+    h = mesh_hierarchy(geom; maxh=40.0, levels=1)
+    refine!(h; mode=:uniform)  # -> 2 levels
+
+    @test_throws ArgumentError level_report(h, 0)
+    @test_throws ArgumentError level_report(h, 3)
+    @test_throws ArgumentError transfer_report(h, 2, 2)   # fine_level != coarse_level + 1
+    @test_throws ArgumentError transfer_report(h, 2, 3)   # fine_level out of range (only 2 levels)
+    @test_throws ArgumentError level_report(42, 1)        # not a MeshHierarchy/Session
+end
+
 @testset "session hierarchy report and Oodi readiness" begin
     geom = load_step(STEP)
     s = mesh_session(geom; maxh=40.0)
@@ -122,21 +164,75 @@ end
     @test !isempty(mr.suggestions)
 end
 
-@testset "export_vtk and export_svg_2d" begin
+@testset "export_vtk, export_obj, and export_svg_2d (real content, not just smoke)" begin
+    # Parse the ASCII VTK legacy header lines this exporter writes (see
+    # src/export_mesh.jl: `POINTS <n> double` and `CELLS <n> <total>`).
+    function _vtk_header(path)
+        points_n = cells_n = cells_total = nothing
+        for l in readlines(path)
+            if (mm = match(r"^POINTS\s+(\d+)", l)) !== nothing
+                points_n = parse(Int, mm.captures[1])
+            elseif (mm = match(r"^CELLS\s+(\d+)\s+(\d+)", l)) !== nothing
+                cells_n = parse(Int, mm.captures[1])
+                cells_total = parse(Int, mm.captures[2])
+            end
+        end
+        return (; points_n, cells_n, cells_total)
+    end
+
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)
+    ntets = num_cells(m)           # 3D top-dimensional cells (tetrahedra)
+    nsurf = num_boundary_facets(m) # 3D boundary triangles
+    nnodes = num_nodes(m)
+
+    # Default: include_volume=true, include_surface=true -> tets (4 verts,
+    # VTK_TETRA) followed by boundary triangles (3 verts, VTK_TRIANGLE).
     vtk = tempname() * ".vtk"
     export_vtk(m, vtk)
     @test isfile(vtk)
     @test occursin("UNSTRUCTURED_GRID", read(vtk, String))
+    h = _vtk_header(vtk)
+    @test h.points_n == nnodes
+    @test h.cells_n == ntets + nsurf
+    @test h.cells_total == 4 * ntets + 3 * nsurf + (ntets + nsurf)
     rm(vtk; force=true)
 
+    # include_surface=false -> volume-only subset actually written (tets only)
+    vtk_vol = tempname() * ".vtk"
+    export_vtk(m, vtk_vol; include_surface=false)
+    hv = _vtk_header(vtk_vol)
+    @test hv.cells_n == ntets
+    @test hv.cells_total == 5 * ntets
+    rm(vtk_vol; force=true)
+
+    # include_volume=false -> surface-only subset actually written (boundary triangles only)
+    vtk_surf = tempname() * ".vtk"
+    export_vtk(m, vtk_surf; include_volume=false)
+    hs = _vtk_header(vtk_surf)
+    @test hs.cells_n == nsurf
+    @test hs.cells_total == 4 * nsurf
+    rm(vtk_surf; force=true)
+
+    # export_obj: "v " lines == node count, "f " lines == boundary-facet count
+    obj = tempname() * ".obj"
+    export_obj(m, obj)
+    @test isfile(obj)
+    obj_lines = readlines(obj)
+    @test count(l -> startswith(l, "v "), obj_lines) == nnodes
+    @test count(l -> startswith(l, "f "), obj_lines) == nsurf
+
+    # export_svg_2d: one <polygon> per domain triangle (structural check --
+    # SVG is a rendering format, so element count is the meaningful invariant)
     disk = Circle(0.0, 0.0, 1.0, "disk", "boundary")
     m2 = generate_mesh(geometry2d(disk); maxh=0.5)
+    ntri2d = num_cells(m2)  # 2D top-dimensional cells (domain triangles)
     svg = tempname() * ".svg"
     export_svg_2d(m2, svg)
     @test isfile(svg)
-    @test occursin("<svg", read(svg, String))
+    svg_txt = read(svg, String)
+    @test occursin("<svg", svg_txt)
+    @test count("<polygon", svg_txt) == ntri2d
     rm(svg; force=true)
 end
 

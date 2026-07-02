@@ -23,6 +23,13 @@ All notable changes to Delone.jl are documented in this file.
   instead of plain tuples — positional destructuring at existing call sites
   keeps working unchanged. The Int32-vs-Int question for connectivity/index
   arrays is now a permanent, documented decision (`AGENTS.md`): keep Int32.
+- Real content verification for `export_vtk`/`export_obj`/`export_svg_2d`
+  tests (parses written files and checks point/cell counts against the
+  source mesh, not just "file exists" + a keyword string) — `export_obj` had
+  zero test coverage before this. Expanded `@test_throws ArgumentError`
+  coverage across `fem.jl`, `hp_apply.jl`, `llm_feedback.jl`, and
+  `mesh_surgery.jl` (not an exhaustive sweep — `generation_result.jl`/
+  `snapshots.jl`/`tags.jl` remain thinner, noted for a future round).
 
 ### Fixed
 - `export_vtk`'s 2D `include_volume` path wrote 4-node cells (a bogus padded

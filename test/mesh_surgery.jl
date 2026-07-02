@@ -104,6 +104,7 @@ end
 
     @test_throws ArgumentError node_tree(zeros(4, 3))
     @test_throws ArgumentError node_tree(zeros(3, 0))
+    @test_throws ArgumentError node_tree(P; margin=-1.0)
     @test_throws ArgumentError nodes_near(tree, P[:, 1], -1.0)
 
     # Brute-force cross-check on several query points/radii.
