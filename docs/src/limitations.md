@@ -11,7 +11,7 @@ the upstream trees.
 | Area | Why |
 |------|-----|
 | `CurvedElements` direct API | Used indirectly via `BuildCurvedElements`; full API needs NGSolve FEM context. |
-| `Identifications` (periodic mesh glue) | Complex; partial access via `GetPeriodicVertices` / `periodic_vertex_pairs`. |
+| `Identifications` (periodic mesh glue) | ~~Complex; partial access via `GetPeriodicVertices` / `periodic_vertex_pairs`.~~ **Read+write for the axis-aligned box/hex case**: [`identify_periodic!`](@ref)/[`identify_periodic_box!`](@ref) set up periodic identification pre-mesh (see [Building geometry](@ref "Building geometry")); still not wrapped: arbitrary curved-face pairing (needs full `TopoDS_Shape` navigation, not just bounding-box face selection) and multi-fragment face pairing (a boolean cut can split one periodic face into several pieces touching the same plane). |
 | `ZRefinement` / structured z-refinement | Specialized path for layered meshes. |
 | `Mesh::Distribute`, `ParallelMetis` | MPI domain decomposition inside Netgen (consumers own partition policy). |
 | `GeometryRegister` plugin system | Internal geometry registration. |

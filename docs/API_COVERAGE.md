@@ -33,7 +33,9 @@ tables, parallel Metis/Distribute helpers),
 (b) hp-refinement machinery that requires CurvedElements state
 (ZRefinement, direct CurvedElements API, hp order and cluster-rep Ngx_Mesh
 methods — these are bound but crash without hp state),
-(c) STL topology inspection and Identifications.
+(c) STL topology inspection, and the parts of `Identifications` beyond the
+axis-aligned-box periodic case (arbitrary curved-face pairing, the raw
+point-index-level API).
 See the **Not yet wrapped** section at the end.
 
 ---
@@ -112,7 +114,7 @@ elements or periodic identifications) to be populated first.
 | Class | Header | Why not wrapped |
 |-------|--------|-----------------|
 | `CurvedElements` | `meshing/curvedelems.hpp` | Used indirectly via `Mesh::BuildCurvedElements`; direct use requires NGSolve FEM context |
-| `Identifications` | `meshing/meshtype.hpp` | Mesh periodicity / point identification tables; complex interface |
+| `Identifications` | `meshing/meshtype.hpp` | Read side (`GetNIdentifications`/`GetPeriodicVertices`) and axis-aligned-box write side (`OCC_IdentifyFaces`/`OCC_RebuildGeometry` → `identify_periodic!`/`identify_periodic_box!`) now wrapped; the full point-index-level `Add`/`GetNr`/`SetName` API and arbitrary curved-face pairing remain unwrapped |
 | `ZRefinementOptions` | `meshing/bisect.hpp` | Z-direction refinement for structured meshes |
 | free: `BisectTetsCopyMesh`, `ZRefinement` | `meshing/bisect.hpp` | Specialized refinement paths |
 | `GeometryShape` / `GeometryVertex/Edge/Face/Solid` | `meshing/basegeom.hpp` | Abstract base classes for geometry shapes; user-visible only through OCCGeometry |
