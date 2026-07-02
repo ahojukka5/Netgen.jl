@@ -268,12 +268,53 @@ CI. This converts the docs from "probably right" to "tested".
 
 ### D4. Registration track (longer pole, mostly upstream)
 
-1. Register/publish `NGSolveNetgen_jll` and `NetgenCxxWrap_jll` (Yggdrasil or a
-   private registry) — replaces `gen/build_local.jl` + local `Artifacts.toml`
-   binding.
-2. Register `OodiCore.jl` (and Monge/OpenCascade.jl) or move `[sources]` to git
-   URLs.
-3. Then Delone.jl itself: General registry or the org's private registry.
+**Update (2026-07-02): further along than assumed.** All three native-binding
+JLLs in the dependency chain already have working `BinaryBuilder.jl`
+`build_tarballs.jl` scripts and their own GitHub repos — this is not "needs to
+be built from scratch," it's "needs a Yggdrasil PR and cross-platform build
+verification":
+
+```
+OpenCascadeCxxWrap_jll   build_tarballs.jl present, github.com/ahojukka5/OpenCascadeCxxWrap_jll
+NGSolveNetgen_jll        build_tarballs.jl present, github.com/ahojukka5/NGSolveNetgen_jll
+NetgenCxxWrap_jll        build_tarballs.jl present, github.com/ahojukka5/NetgenCxxWrap_jll
+                         (depends on NGSolveNetgen_jll + OCCT_jll + Zlib_jll + libcxxwrap_julia_jll)
+```
+
+Dependency order for Yggdrasil submission: `NGSolveNetgen_jll` first (no
+Delone-stack deps beyond upstream OCCT/Netgen sources), then
+`NetgenCxxWrap_jll` (depends on the above), in parallel with
+`OpenCascadeCxxWrap_jll` (Monge.jl's own native binding, same pattern).
+
+**Package layer, checked 2026-07-02:**
+
+| Package | UUID/version | LICENSE | `[sources]` (path deps) | Blocker |
+|---|---|---|---|---|
+| `OodiCore.jl` | present, `0.1.0` | ✓ present | none | Otherwise registration-ready — smallest, cleanest package in the stack; a good first General-registry candidate once someone verifies its own test suite/compat bounds are complete. |
+| `Monge.jl` (repo dir `OpenCascade.jl`, package name `Monge`) | present, `0.1.0` | ✗ **missing** | `OodiCore` (path) | Needs a LICENSE file (quick fix) + `OodiCore` resolved (registered or git-sourced) + `OpenCascadeCxxWrap_jll` registered (native binding, see above). |
+| `Delone.jl` (this repo) | present, `0.1.0` | ✓ present (added this round) | `OodiCore`, `Monge` (both path) | Needs `OodiCore`/`Monge` resolved + `NetgenCxxWrap_jll`/`NGSolveNetgen_jll` registered + the local `libnetgen_cxxwrap` artifact binding in `Artifacts.toml` replaced by the registered JLL. |
+
+**Concrete next steps, in dependency order:**
+1. Add a LICENSE to `Monge.jl` (5-minute fix, blocks its own registration today).
+2. Submit `NGSolveNetgen_jll`'s `build_tarballs.jl` to Yggdrasil; verify it
+   actually builds on Yggdrasil's CI across the platforms it claims to support
+   (this is the real gate — a `build_tarballs.jl` existing locally doesn't
+   guarantee it builds clean on Yggdrasil's sandboxed builders on the first try).
+3. Submit `NetgenCxxWrap_jll` and `OpenCascadeCxxWrap_jll` (parallel, both
+   depend only on already-registered upstream JLLs + step 2's output).
+4. Once both CxxWrap JLLs are registered: update `Monge.jl` and `Delone.jl` to
+   depend on the registered JLLs instead of `gen/build_local.jl` +
+   locally-bound `Artifacts.toml` entries; drop the local build script (or
+   keep it as a `dev`-only convenience for contributors without registry access).
+5. Register `OodiCore.jl` → `Monge.jl` → `Delone.jl`, in that order (each
+   depends on the previous), to the General registry or a private registry if
+   the Oodi ecosystem isn't ready for public release yet.
+
+None of this is safely automatable from within a single coding session — it
+requires real Yggdrasil CI runs (which can surface platform-specific build
+failures no local check catches) and, for General-registry submission, a
+human decision about public release timing. Treat this as a tracked,
+sequenced initiative rather than a task to "finish."
 
 ---
 

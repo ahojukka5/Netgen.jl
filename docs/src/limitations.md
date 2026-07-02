@@ -45,6 +45,20 @@ is currently reliable. This looks like a real bug in the underlying
 upstream in `NetgenCxxWrap_jll` before trusting `f2`–`f4` for anything.
 Discovered while writing `docs/src/examples/tags_hp_fem.md`'s doctest.
 
+### `merge_mesh_file!` — boundary/segment data does not appear to merge
+
+`merge_mesh_file!(mesh, path)` (`src/mesh_surgery.jl`, wraps `Internals.Merge`)
+was verified to exactly double node and volume-element counts when merging a
+mesh into a copy of itself, as expected. But `GetNSE` (boundary triangles) and
+`GetNSeg` (edge segments) did **not** change, even though the saved `.vol`
+file being merged contains non-empty `surfaceelements`/`edgesegmentsgi3`
+sections and the reviewed Netgen source (`Mesh::Merge`) reads and appends
+them. This looks like a discrepancy between the reviewed upstream C++ source
+and this build's actually-linked runtime, not a Julia-layer bug — rely on
+`merge_mesh_file!` for volume topology (points + tets) only; verify
+`num_boundary_facets` yourself before depending on it merging surface data
+too. Discovered while building `src/mesh_surgery.jl`.
+
 ### 2D tag/name limitation (Julia layer, not missing C++)
 
 In 2D, `material_names` is empty (`GetNDomains == 0` on the current path), and

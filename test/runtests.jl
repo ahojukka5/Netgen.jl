@@ -57,6 +57,7 @@ const CYLINDER = joinpath(@__DIR__, "fixtures", "cylinder.brep")  # unit cylinde
     # Delone mesh core
     include("mesh.jl")
     include("mesh_api.jl")
+    include("mesh_construction.jl")
     include("llm_feedback.jl")
     include("refinement.jl")
     include("local_sizing.jl")
@@ -71,6 +72,7 @@ const CYLINDER = joinpath(@__DIR__, "fixtures", "cylinder.brep")  # unit cylinde
     include("stl.jl")
     include("boundary_naming_stl.jl")
     include("gprim.jl")
+    include("mesh_surgery.jl")
     include("mesh2.jl")
     include("ngx2.jl")
     include("native_quality.jl")

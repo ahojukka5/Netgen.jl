@@ -4,6 +4,61 @@ All notable changes to Delone.jl are documented in this file.
 
 ## [Unreleased]
 
+### Added (roadmap Phase 4 — interop, surgery, lifetime audit)
+- **`mesh_from_arrays`** (`src/mesh_construction.jl`) — the other half of the
+  interop story: build a mesh from plain point/tet/surface arrays (e.g. from
+  Gmsh, Triangle, a solver's own remesher). Direct `Internals.Element`/
+  `Element2d` construction is confirmed structurally blocked (registered as
+  C++ types but with no constructor and no `PNum` setter — `AddVolumeElement`/
+  `AddSurfaceElement`/`SetVolumeElement`/`SetSurfaceElement` are therefore all
+  unreachable despite being wrapped). Implemented instead by hand-writing a
+  Netgen `.vol` ASCII mesh file (grammar reverse-engineered from Netgen's own
+  `Mesh::Save`/`Load` C++ source) and loading it via the same path
+  `load_mesh` already uses. Verified with an **exact, full-array** round-trip
+  (not sampled) on a real 131k-tet mesh: points, connectivity, cell/boundary
+  regions, and `GetNDomains`/`GetNFD` all matched precisely, including
+  `material_names` after `rename_materials!`. 3D only; 2D is a documented
+  follow-up.
+- **Mesh surgery** (`src/mesh_surgery.jl`): `split_to_tets!`,
+  `split_into_parts!`, `merge_mesh_file!`, `get_sub_mesh`, `pure_tet_mesh`,
+  `pure_trig_mesh`, `surface_mesh_orientation!`. Each docstring records what
+  was empirically verified, including two real surprises: `split_into_parts!`
+  is destructive to existing boundary/material names (collapsed 375→2 face
+  descriptors on the STEP fixture, all reset to `"default"`) and is
+  documented with a prominent warning; `get_sub_mesh`'s `domains`/`faces`
+  arguments are `std::regex` patterns matched against material/boundary
+  **names**, not `"1-3,5"`-style index ranges (confirmed empirically and via
+  the Netgen source) — no numeric-range convenience was invented since none
+  was confirmed to exist. `merge_mesh_file!`'s boundary/segment-data gap is
+  tracked in `docs/src/limitations.md` rather than silently assumed to work.
+- **Spatial search** (`src/spatial_search.jl`): `NodeTree`/`node_tree`/
+  `build_node_tree`/`nodes_near`, a small wrapper over `Internals.Point3dTree`
+  for radius-based node queries. Cross-checked against a brute-force linear
+  scan on a real 29k-node mesh — exact match. Pairs naturally with
+  `local_sizing.jl`'s `refine_near!` (currently an O(n) linear scan);
+  wiring them together is a documented future integration, not done here.
+- **Handle-lifetime/GC audit** (`docs/src/handles_gc.md` extended, no code
+  changed — investigation found nothing to fix): empirically confirmed that
+  dropping a geometry's Julia reference while a mesh built from it is still
+  alive is safe (boundary-node radius exactly preserved after forced `GC.gc`,
+  in both 2D and 3D, and via `refine!`/`make_second_order!` which are the
+  operations most likely to touch geometry data after the fact) — because
+  `refine!`/`bisect!`/`make_second_order!` fetch geometry via
+  `Internals.GetGeometry(m)` from the C++ mesh object itself, never from a
+  Julia-held reference, so the C++ layer's own ownership is structurally
+  independent of Julia's GC. Same result confirmed for `MeshHierarchySession`/
+  `MeshHierarchy` when only `finest(...)` is retained and the session/
+  hierarchy struct itself is dropped. Also documented: no thread-safety
+  mechanism exists anywhere in the codebase — assume live handles are not
+  thread-safe.
+- Registration-track update (`ROADMAP.md`'s D4): confirmed
+  `NGSolveNetgen_jll`, `NetgenCxxWrap_jll`, and `OpenCascadeCxxWrap_jll` all
+  already have working `BinaryBuilder.jl` `build_tarballs.jl` scripts and
+  their own GitHub repos — the remaining work is a Yggdrasil PR + cross-
+  platform build verification, not building these from scratch. Concrete
+  sequenced checklist added (`Monge.jl` needs a LICENSE file; dependency
+  order for registry submission spelled out).
+
 ### Added (roadmap Phase 3 — polish & ecosystem)
 - **Getting-started tutorial** (`docs/src/tutorial.md`) and five new concept
   pages: `mesh_options.md`, `sessions_snapshots.md`, `introspection_contract.md`,

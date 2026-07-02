@@ -35,6 +35,7 @@ include("geometry.jl")
 include("extraction.jl")
 include("tags.jl")
 include("mesh.jl")
+include("mesh_construction.jl")
 include("options.jl")
 include("validation.jl")
 include("quality.jl")
@@ -43,6 +44,8 @@ include("mesh_report.jl")
 include("generation_result.jl")
 include("refinement.jl")
 include("local_sizing.jl")
+include("mesh_surgery.jl")
+include("spatial_search.jl")
 include("hierarchy.jl")
 include("meshability.jl")
 include("export_mesh.jl")
@@ -74,6 +77,7 @@ export meshing_parameters, generate_mesh, generate_mesh_result, try_generate_mes
 export MeshGenerationResult, MeshGenerationDiagnostics, mesh
 export save_mesh, load_mesh
 export update_topology!, compress!
+export mesh_from_arrays
 
 # --- mesh introspection -----------------------------------------------------
 export num_nodes, num_cells, num_boundary_facets, mesh_dimension, connectivity
@@ -110,6 +114,13 @@ export RefinementResult, refine_session!
 export LocalSizeField, local_size_field, field_h, field_min_h
 export restrict_h!, restrict_h_at!, mesh_h_at, set_global_h!, set_minimal_h!
 export refine_near!, local_size_requests
+
+# --- mesh surgery -------------------------------------------------------------
+export split_to_tets!, split_into_parts!, merge_mesh_file!, get_sub_mesh
+export pure_tet_mesh, pure_trig_mesh, surface_mesh_orientation!
+
+# --- spatial search -----------------------------------------------------------
+export NodeTree, node_tree, build_node_tree, nodes_near
 
 # --- multigrid hierarchy ----------------------------------------------------
 export copy_mesh, MeshHierarchy, coarse_hierarchy, uniform_hierarchy, mesh_hierarchy

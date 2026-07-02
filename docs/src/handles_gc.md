@@ -139,6 +139,128 @@ behavior in this build," treat it as an open item to verify against
 CxxWrap.jl's own documentation rather than an assumption this package makes
 for you.
 
+## Does a mesh's geometry dependency survive dropping the Julia `geometry` reference?
+
+The question above ("does *this* handle outlive its container?") has a mirror
+image that is arguably more concerning: `generate_mesh_result` (in
+`src/generation_result.jl`) calls `Internals.SetGeometry(m, geom)` once, at
+mesh-creation time, and never stores `geom` anywhere the returned mesh object
+itself keeps a Julia-level reference to. If Julia's GC were free to collect
+`geom` as soon as no Julia binding pointed at it — even while a mesh built
+from it is still alive and in active use — every geometry-aware operation on
+that mesh (`refine!`, `bisect!`, `make_second_order!`, all of which
+re-project new nodes onto the *true* boundary/surface, not the polygonal
+approximation) would be reading through a dangling reference. This was a
+real, previously untested risk, not a hypothetical one, and it was
+investigated empirically rather than assumed away.
+
+**Why the risk is structurally smaller than it first looks:** `refine!`,
+`bisect!`, and `make_second_order!` (`src/refinement.jl`) never receive a
+Julia `geom` argument at all — they fetch the geometry via
+`Internals.GetGeometry(m)`, i.e. **from the mesh object itself**, not from
+any Julia-side variable:
+
+```julia
+function refine!(m)
+    Internals.Refine(Internals.GetRefinement(Internals.GetGeometry(m)), m)
+    return m
+end
+```
+
+This means the C++ `Mesh` object must already hold its own reference to the
+geometry set by `SetGeometry` — Julia holding or dropping the original
+`geom` binding was never what kept the C++ mesh-to-geometry link alive in
+the first place. That's a structural argument; the empirical test confirms
+it actually behaves that way at runtime.
+
+**Empirical test (2D, `Circle`/`geometry2d`):** built inside a function that
+returns only the mesh (`geom` is a purely local binding, unreachable after
+the function returns), followed by five rounds of `GC.gc(true); GC.gc(true);
+sleep(0.05)` plus scratch allocations to flush CxxWrap's finalizer queue:
+
+- Before dropping+GC'ing `geom`: `num_nodes(m) == 39`, max boundary point
+  radius `== 1.0` (true circle radius).
+- After dropping `geom` and forcing GC: `num_nodes(m) == 39` (unchanged,
+  still callable).
+- After `refine!(m)` (geometry-aware — re-projects every new boundary node
+  onto the true circle): `num_nodes(m) == 133`, max boundary radius
+  `== 1.0` to within `1e-9` — **exactly** the true radius, not a stale or
+  corrupted polygonal approximation.
+- After `make_second_order!(m)` (curves new edge-midpoint nodes onto the true
+  boundary): `num_nodes(m) == 489`, max boundary radius still `== 1.0` to
+  within `1e-9`.
+
+**Same test in 3D** (`load_step("frame.step")`, `maxh=5.0`, geometry dropped
+and GC'd before any refinement): `refine!` grew the mesh from 92,695 to
+632,373 nodes, and a subsequent `make_second_order!` grew it to 4,638,346
+nodes — both completed without a crash, segfault, or exception, which would
+be the expected failure mode of reading through a freed C++ geometry object.
+
+**Conclusion: this is safe, and provably so.** The C++ `Mesh` object holds
+its own (evidently reference-counted, e.g. `shared_ptr`-style) link to the
+geometry once `SetGeometry` is called; Julia's GC collecting the Julia-level
+`geom` wrapper only decrements *that* wrapper's reference count, it does not
+tear down the underlying C++ geometry object as long as the mesh's own
+internal reference to it is still live. No code change was made here —
+adding a Julia-side keep-alive field (e.g. storing `geom` in
+`MeshGenerationResult` or the mesh wrapper) would be pure defensive
+complexity with no empirically-demonstrated failure to justify it, which is
+exactly the kind of unnecessary speculative fix this project's conventions
+argue against.
+
+## `MeshHierarchySession` / `MeshHierarchy`: does holding only `finest(h)` and dropping `h` break anything?
+
+`MeshHierarchySession` (`src/session.jl`) and `MeshHierarchy`
+(`src/hierarchy.jl`) both store `geometry` and `meshes::Vector{Any}` as plain
+struct fields — there is no special ownership relationship *between* those
+two fields beyond both being ordinary Julia references reachable from the
+struct. That means:
+
+- As long as the struct itself (`s` / `h`) is reachable, both its geometry
+  and every mesh level stay reachable — the ordinary case documented above.
+- If a caller extracts only `finest(h)` (or any `level_mesh(s, k)`) and lets
+  the struct itself become unreachable, the struct's own references to
+  `geometry` and the other mesh levels can be collected — but the *extracted
+  mesh's own* dependency on the geometry is unaffected, for the same
+  structural reason as the previous section: the C++ mesh holds its own
+  reference to its geometry via `SetGeometry`/`GetGeometry`, independent of
+  whichever Julia container(s) happened to reference the `geom` value.
+
+Empirically verified for both types with the same pattern as Investigation
+1: a function builds a `mesh_session`/`uniform_hierarchy`, calls
+`request_uniform_refinement!`/appends a level, extracts only `finest(...)`,
+and returns that alone (session/hierarchy struct and geometry variable both
+unreachable on return). After five rounds of forced `GC.gc(true)`:
+
+- Session path (`Circle` radius 2.0): `num_nodes` unchanged across GC
+  (597 before and after); `refine!` on the retained, session-dropped mesh
+  produced a max boundary radius of exactly `2.0` (within `1e-9`).
+- Hierarchy path (`Circle` radius 3.0, 2-level `uniform_hierarchy`):
+  `num_nodes` unchanged across GC (1445 before and after); `refine!` on the
+  retained, hierarchy-dropped mesh produced a max boundary radius of
+  `3.0000000000000004` (within `1e-9` of the true radius), matching the
+  pre-GC value exactly.
+
+**Conclusion:** dropping the session/hierarchy struct while keeping only one
+extracted mesh handle is safe in the same sense, and for the same underlying
+reason, as dropping just the geometry reference alone: each Julia binding
+(struct field or extracted handle) independently keeps what it points to
+alive, and the C++ mesh-to-geometry link does not depend on any particular
+Julia binding surviving. No code change was made.
+
+## Thread-safety: not documented, not implemented, assume unsafe
+
+A repository-wide search (`grep -rn "Threads\|lock\|Mutex\|@lock" src/`) found
+no thread-safety mechanism anywhere in `src/` — no locks, no `Threads.@spawn`
+coordination, no documented concurrency contract for `MeshHierarchySession`,
+`MeshHierarchy`, or any live mesh/geometry handle. Treat every CxxWrap-wrapped
+handle and every mutable struct in this package (`MeshHierarchySession`,
+`MeshHierarchy`, and the raw `Internals` mesh/geometry objects) as **not
+safe for concurrent use from multiple threads** unless and until this
+package documents and tests a specific concurrency contract — this is a
+documentation statement of the honest default, not a result of testing actual
+concurrent access.
+
 Next: [Sessions & snapshots](sessions_snapshots.md) for the generation/staleness
 contract this page's snapshot contrast leans on, and [Internals escape
 hatch](internals_escape_hatch.md) for when you need to reach into
