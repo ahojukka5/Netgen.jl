@@ -4,6 +4,32 @@ All notable changes to Delone.jl are documented in this file.
 
 ## [Unreleased]
 
+### Fixed (roadmap Phase 5.2 — AGENTS.md-convention bugfixes)
+- `load_geometry` threw a bare `ErrorException` on an unsupported file
+  extension instead of `ArgumentError`, violating AGENTS.md's explicit
+  convention (every other loader/validator already followed it).
+- `refine!`/`refine_session!` (on failure, `result=false`) threw
+  `ArgumentError(string(res))`, stringifying an entire `RefinementResult`
+  struct into the error message; now builds a clean message from
+  `res.diagnostics`.
+
+### Added (roadmap Phase 5.2)
+- `MeshLevelSnapshot` gained a `Base.show` method (dimension, level,
+  generation, node/cell/facet counts) — printing one at the REPL previously
+  dumped every field, including full coordinate/connectivity matrices.
+
+### Changed (roadmap Phase 5.2)
+- `parent_edges`, `parent_faces`, `volume_element_transformation`, and
+  `find_element` now return `NamedTuple`s (`(info=, e1=, e2=, e3=)`,
+  `(info=, f1=, f2=, f3=, f4=)`, `(x=, J=)`, `(cell=, lambda=)`) instead of
+  plain tuples, continuing the `mesh_bounding_box`/`connectivity`/
+  `element_orders_xyz` precedent — positional destructuring at existing call
+  sites keeps working unchanged. `find_element` still returns `nothing` on a
+  miss.
+- `set_global_h!`, `set_minimal_h!`, `restrict_h_at!` docstrings now state
+  the same "does not retroactively affect already-generated elements"
+  caveat that `restrict_h!` already documented.
+
 ### Fixed (roadmap Phase 5.1 — documentation corrections)
 - `docs/src/mesh_options.md` still claimed 2D `local_size` "only achieves
   uniform refinement... not spatial localization" and that a warning was
