@@ -177,6 +177,11 @@ end
 
 Bulk convenience over [`restrict_h!`](@ref): `points` is `2×n` or `3×n` (one
 column per point), `hs` is length `n`. Throws `ArgumentError` on shape mismatch.
+
+Same caveat as [`restrict_h!`](@ref): in this build, does **not**
+retroactively change element sizes produced by [`generate_mesh`](@ref) — use
+`MeshOptions(local_size=...)` or [`refine_near!`](@ref) after generation for
+that.
 """
 function restrict_h_at!(m, points::AbstractMatrix{<:Real}, hs::AbstractVector{<:Real})
     d, n = size(points)
@@ -201,7 +206,9 @@ mesh_h_at(m, point) = Internals.GetH(m, _as_point3d(point))
     set_global_h!(mesh, h) -> mesh
 
 Set the mesh's global/background target size (`Internals.SetGlobalH`). `h` must
-be `> 0`.
+be `> 0`. Same caveat as [`restrict_h!`](@ref): in this build, does **not**
+retroactively change element sizes produced by [`generate_mesh`](@ref) — pass
+`maxh` to `generate_mesh`/`MeshOptions` for that instead.
 """
 function set_global_h!(m, h::Real)
     h > 0 || throw(ArgumentError("set_global_h!: h must be > 0 (got $h)"))
@@ -213,6 +220,9 @@ end
     set_minimal_h!(mesh, h) -> mesh
 
 Set the mesh's minimum allowed size (`Internals.SetMinimalH`). `h` must be `> 0`.
+Same caveat as [`restrict_h!`](@ref): in this build, does **not** retroactively
+change element sizes produced by [`generate_mesh`](@ref) — pass `minh` to
+`generate_mesh`/`MeshOptions` for that instead.
 """
 function set_minimal_h!(m, h::Real)
     h > 0 || throw(ArgumentError("set_minimal_h!: h must be > 0 (got $h)"))
