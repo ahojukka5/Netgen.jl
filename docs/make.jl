@@ -38,6 +38,7 @@ makedocs(
             "Validation, quality & meshability" => "reference/validation_quality.md",
             "Refinement" => "reference/refinement.md",
             "Local mesh sizing" => "reference/local_sizing.md",
+            "Mesh surgery & spatial search" => "reference/mesh_surgery.md",
             "Multigrid hierarchy" => "reference/hierarchy.md",
             "Live session" => "reference/session.md",
             "Snapshots & Oodi readiness" => "reference/snapshots.md",
