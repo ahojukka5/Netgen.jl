@@ -16,6 +16,7 @@ surface_element_orders
 hp_element_levels
 set_element_order!
 set_element_orders!
+set_element_orders_xyz!
 set_surface_element_order!
 set_surface_element_orders!
 mark_for_ngx_refinement!

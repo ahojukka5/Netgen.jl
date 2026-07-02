@@ -19,6 +19,15 @@
     @test oxyz.ox == ox && oxyz.oy == oy && oxyz.oz == oz
 end
 
+@testset "set_element_orders_xyz! (single-cell anisotropic)" begin
+    geom = load_step(STEP)
+    m = generate_mesh(geom; maxh=40.0)
+    set_element_orders_xyz!(m, 1, 2, 3, 4)
+    oxyz = element_orders_xyz(m)
+    @test oxyz.ox[1] == 2 && oxyz.oy[1] == 3 && oxyz.oz[1] == 4
+    @test_deprecated set_element_orders!(m, 1, 2, 3, 4)
+end
+
 @testset "set_surface_element_order! (3D boundary)" begin
     geom = load_step(STEP)
     m = generate_mesh(geom; maxh=40.0)

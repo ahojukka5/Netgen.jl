@@ -103,15 +103,18 @@ function set_element_order!(m, enr::Integer, order::Integer)
 end
 
 """
-    set_element_orders!(mesh, enr, ox, oy, oz) -> mesh
+    set_element_orders_xyz!(mesh, enr, ox, oy, oz) -> mesh
 
 Set anisotropic orders of cell `enr` (1-based) via `Ngx_Mesh::SetElementOrders`.
-In 2D only `ox`, `oy` are used by Netgen.
+In 2D only `ox`, `oy` are used by Netgen. Pairs with the reader
+[`element_orders_xyz`](@ref).
 """
-function set_element_orders!(m, enr::Integer, ox::Integer, oy::Integer, oz::Integer)
+function set_element_orders_xyz!(m, enr::Integer, ox::Integer, oy::Integer, oz::Integer)
     Internals.SetElementOrders(_ngx_mesh(m), Int(enr), Int(ox), Int(oy), Int(oz))
     return m
 end
+
+Base.@deprecate set_element_orders!(m, enr::Integer, ox::Integer, oy::Integer, oz::Integer) set_element_orders_xyz!(m, enr, ox, oy, oz)
 
 """
     set_element_orders!(mesh, orders) -> mesh

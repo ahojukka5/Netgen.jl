@@ -166,7 +166,7 @@ export set_material_name!, set_boundary_name!, rename_materials!, rename_boundar
 # --- hp-adaptivity ----------------------------------------------------------
 export element_order, element_orders, element_orders_xyz
 export surface_element_order, surface_element_orders, hp_element_levels
-export set_element_order!, set_element_orders!
+export set_element_order!, set_element_orders!, set_element_orders_xyz!
 export set_surface_element_order!, set_surface_element_orders!
 export mark_for_ngx_refinement!, ngx_refine!, hp_refine!, split_alfeld!
 export hp_clusters_available
