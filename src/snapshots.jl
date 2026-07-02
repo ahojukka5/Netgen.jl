@@ -90,6 +90,14 @@ struct MeshLevelSnapshot{Dim,T,I}
     generation::Int
 end
 
+function Base.show(io::IO, s::MeshLevelSnapshot{Dim}) where {Dim}
+    print(io, "MeshLevelSnapshot{", Dim, "}(level=", s.level,
+          ", generation=", s.generation,
+          ", nodes=", size(s.coordinates, 2),
+          ", cells=", size(s.volume_connectivity, 2),
+          ", facets=", size(s.surface_connectivity, 2), ")")
+end
+
 """
     HierarchyTransferSnapshot{I,T}
 
