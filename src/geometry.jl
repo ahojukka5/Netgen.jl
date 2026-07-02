@@ -53,7 +53,7 @@ function load_geometry(path::AbstractString)
     ext == ".brep"           && return Internals.LoadOCC_BREP(String(path))
     ext in (".iges", ".igs") && return Internals.LoadOCC_IGES(String(path))
     ext == ".stl"            && return Internals.LoadSTL(String(path))
-    error("unsupported geometry extension: $ext")
+    throw(ArgumentError("unsupported geometry extension: $ext"))
 end
 
 # --- 2D geometry (geom2d / csg2d) -------------------------------------------

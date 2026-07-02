@@ -58,3 +58,7 @@ end
     geom = load_geometry(stl_path)
     @test I.GetNT(geom) == 4
 end
+
+@testset "load_geometry: unsupported extension throws ArgumentError" begin
+    @test_throws ArgumentError load_geometry("model.xyz")
+end
