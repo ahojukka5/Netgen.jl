@@ -32,6 +32,7 @@ include("internals.jl")
 include("constants.jl")
 include("diagnostics.jl")
 include("geometry.jl")
+include("periodic.jl")
 include("extraction.jl")
 include("tags.jl")
 include("mesh.jl")
@@ -65,11 +66,16 @@ export NG_TET, NG_TRIG
 export NG_REFINE_H, NG_REFINE_P, NG_REFINE_HP
 export MESHING3_OK, MESHING3_GIVEUP, MESHING3_NEGVOL,
        MESHING3_OUTERSTEPSEXCEEDED, MESHING3_TERMINATE, MESHING3_BADSURFACEMESH
+export NG_ID_PERIODIC, NG_ID_CLOSESURFACES, NG_ID_CLOSEEDGES
 
 # --- geometry ---------------------------------------------------------------
 export load_step, load_iges, load_brep, load_geometry, load_stl, load_splinegeometry2d
 export geometry2d, Circle, Rectangle, CSG2d
 export occ_geometry_from_brep_string
+
+# --- periodic boundary conditions (OCC face identification) -----------------
+export occ_nr_faces, occ_face_bbox, faces_on_plane
+export identify_periodic!, identify_periodic_box!
 
 # --- mesh generation & I/O --------------------------------------------------
 export MeshOptions, mesh_options, validate_options!, to_meshing_parameters

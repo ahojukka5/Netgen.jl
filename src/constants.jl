@@ -36,3 +36,14 @@ const MESHING3_TERMINATE           = 4
 
 """`MESHING3_RESULT` code: the input surface mesh is not suitable for volume meshing."""
 const MESHING3_BADSURFACEMESH      = 5
+
+# Identifications::ID_TYPE ids (for identify_periodic!/identify_periodic_box!).
+
+"""Netgen `Identifications::ID_TYPE` id for a periodic (translation-mapped) identification."""
+const NG_ID_PERIODIC = 2
+
+"""Netgen `Identifications::ID_TYPE` id for a close-surfaces identification (thin-layer/prism meshing)."""
+const NG_ID_CLOSESURFACES = 3
+
+"""Netgen `Identifications::ID_TYPE` id for a close-edges identification (2D analogue of `NG_ID_CLOSESURFACES`)."""
+const NG_ID_CLOSEEDGES = 4
