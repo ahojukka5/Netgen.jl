@@ -77,15 +77,15 @@ local-h field during surface meshing and **discards** any restriction applied
 beforehand — so those calls cannot steer element sizes during initial
 generation (see the "Julian-layer gaps" entry in [Not yet wrapped](limitations.md)
 for the full empirical writeup). `MeshOptions.local_size` therefore works
-around this with coarse generation followed by geometric mark-and-bisect
-refinement near each requested point — a mechanism verified to work in 3D. In
-2D, marked-element bisection was found to refine **uniformly** regardless of
-which elements are marked in this build, so `local_size` only achieves
-uniform refinement in 2D, not spatial localization; a warning is emitted the
-first time this happens in a session. See [Local mesh sizing](reference/local_sizing.md)
-for `refine_near!` and the rest of the standalone size-field API this
-mechanism is built from — that page, not a `MeshOptions` field, is the
-current mechanism for genuinely spatial/curvature-aware refinement.
+around this with coarse generation followed by geometric mark-and-refine
+near each requested point — verified to genuinely localize in **both 2D and
+3D**: 3D uses `mark_for_refinement!`/`bisect!`; 2D uses
+`mark_for_ngx_refinement!`/`ngx_refine!` instead, since plain `bisect!`
+refines 2D meshes uniformly regardless of marking. See
+[Local mesh sizing](reference/local_sizing.md) for `refine_near!` and the
+rest of the standalone size-field API this mechanism is built from — that
+page, not a `MeshOptions` field, is the current mechanism for genuinely
+spatial/curvature-aware refinement.
 
 ## Validating options: throwing vs. non-throwing
 
