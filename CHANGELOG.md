@@ -10,6 +10,19 @@ All notable changes to Delone.jl are documented in this file.
   `boundary_region`, `is_boundary`), accepting either a `MeshLevelSnapshot`
   or a live mesh handle. `export_vtk` (ASCII, dependency-free) is unchanged
   and remains the always-available fallback.
+- **`DeloneGeometryBasicsExt`** (`ext/DeloneGeometryBasicsExt.jl`, weakdep on
+  `GeometryBasics`): `GeometryBasics.Mesh(::MeshLevelSnapshot)`/
+  `GeometryBasics.Mesh(::MeshHierarchySnapshot)`, bridging into the wider
+  Julia visualization/geometry ecosystem — composes with `DeloneMakieExt`
+  (`Makie.mesh(GeometryBasics.Mesh(snapshot))` works once both are loaded).
+  Found and worked around a real bug in `GeometryBasics.connect`: it silently
+  byte-reinterprets mismatched integer element types rather than converting,
+  which would have corrupted `Int32` connectivity data if used directly.
+- `connectivity`, `mesh_bounding_box`, and `element_orders_xyz` now return
+  `NamedTuple`s (`(volume=, surface=)`, `(min=, max=)`, `(ox=, oy=, oz=)`)
+  instead of plain tuples — positional destructuring at existing call sites
+  keeps working unchanged. The Int32-vs-Int question for connectivity/index
+  arrays is now a permanent, documented decision (`AGENTS.md`): keep Int32.
 
 ### Fixed
 - `export_vtk`'s 2D `include_volume` path wrote 4-node cells (a bogus padded

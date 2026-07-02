@@ -14,6 +14,7 @@ Monge = "7c4e8f2a-9b1d-4e6c-a3f8-2d5e6b7c8a9f"
 Zlib_jll = "83775a58-1f1d-513f-b197-d71354ab007a"
 
 [weakdeps]
+GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 
@@ -22,6 +23,7 @@ OodiCore = {path = "/Users/jukka/dev/OodiCore.jl"}
 Monge = {path = "/Users/jukka/dev/Monge.jl"}
 
 [extensions]
+DeloneGeometryBasicsExt = "GeometryBasics"
 DeloneMakieExt = "Makie"
 DeloneWriteVTKExt = "WriteVTK"
 
@@ -29,6 +31,7 @@ DeloneWriteVTKExt = "WriteVTK"
 Aqua = "0.8"
 CxxWrap = "0.17"
 Documenter = "1"
+GeometryBasics = "0.4, 0.5"
 Makie = "0.24"
 OCCT_jll = "7.9"
 OodiCore = "0.1"
