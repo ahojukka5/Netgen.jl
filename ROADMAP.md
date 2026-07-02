@@ -286,6 +286,20 @@ Delone-stack deps beyond upstream OCCT/Netgen sources), then
 `NetgenCxxWrap_jll` (depends on the above), in parallel with
 `OpenCascadeCxxWrap_jll` (Monge.jl's own native binding, same pattern).
 
+**Upstream Netgen PRs opened (2026-07-02), tracked here — this is now the
+critical path for A5:** two bugs found while extending the C++ binding layer
+were fixed on a Netgen fork and PRs opened against upstream Netgen. Status:
+open, awaiting review.
+1. `DLL_HEADER` export macro missing on `STLMeshingDummy` — the specific fix
+   A5 (STL parameter control) needs before it's even worth revisiting locally.
+2. `MeshTopology::parent_faces` array-initialization bug (root-caused: an
+   `operator=(initializer_list)` call silently collapses the array to size 1
+   instead of broadcast-initializing it, causing out-of-bounds reads).
+
+Neither fix helps until merged upstream **and** a new `NGSolveNetgen_jll`
+build picks up the fixed Netgen source — treat both as blocked on external
+review, not on anything actionable in this repo.
+
 **Package layer, checked 2026-07-02:**
 
 | Package | UUID/version | LICENSE | `[sources]` (path deps) | Blocker |
@@ -340,8 +354,35 @@ registration.
 ### Definition of done for "polished"
 
 **Status as of 2026-07-02: Phases 1-4 executed and committed** (`3526837`,
-`46fc6cf`, `1e43fdf`, `310ab27`, `cc58928`; 420 → 693 passing tests). See
-per-item status below — most items are done; a handful are intentionally
+`46fc6cf`, `1e43fdf`, `310ab27`, `cc58928`; 420 → 693 passing tests), plus a
+follow-up C++ binding round (`4331e85`..`d0a4261`; 693 → 719 passing tests)
+that closed two of the previously-open gaps by extending the native binding
+layer instead of just documenting the limitation:
+
+- **`Element`/`Element2d` construction** is now real (was structurally
+  blocked — the C++ types had no constructor and no `PNum` setter). New
+  Julian API: `add_volume_element!`/`add_surface_element!`
+  (`src/mesh_construction.jl`), incremental one-element-at-a-time editing
+  complementing `mesh_from_arrays`'s whole-mesh construction.
+- **A4's `FindOpenElements`/`FindOpenSegments` count is now real** —
+  `open_element_count`/`netgen_open_element_count` on
+  `NativeQualityReport`/`MeshQualityReport`, well-verified as a genuine
+  watertightness signal, feeding a new `suggest_mesh_fixes` suggestion.
+- **A5 STLParameters investigated one level deeper and confirmed blocked at
+  the Netgen-core level**, not just the binding layer: the escape-hatch free
+  function `STLMeshingDummy` compiles but fails to *link* (missing export
+  macro in Netgen's own header). Two upstream fixes were prepared on a
+  Netgen fork and PRs have now been opened upstream — see
+  [D4 tracking below](#d4-registration-track-longer-pole-mostly-upstream)
+  for the second fix found along the way (`parent_faces` uninitialized
+  memory, previously thought to be a Netgen-core bug of unclear origin, now
+  root-caused and fixed the same way). **Landing these upstream does not by
+  itself unblock STLParameters** — that additionally needs `STLMeshingDummy`
+  itself exposed with `DLL_HEADER`, which is the PR that was opened; once
+  merged and a new `NGSolveNetgen_jll` build picks it up, `STLOptions` in
+  Delone.jl becomes achievable and should be revisited.
+
+See per-item status below — most items are done; a handful are intentionally
 still open (upstream-blocked, deliberately deferred, or lower-priority
 polish not yet scheduled).
 
@@ -349,7 +390,8 @@ polish not yet scheduled).
       — `refine_near!`/`MeshOptions.local_size` (3D; 2D uniform-only, a real
       fix path via `ngx_refine!` is identified but not yet wired in).
 - [x] A mesh can enter and leave Delone as plain arrays — `mesh_from_arrays`
-      (3D only; 2D deferred).
+      (whole-mesh, 3D only, 2D deferred) plus `add_volume_element!`/
+      `add_surface_element!` (incremental, one element at a time).
 - [x] Docs site has a tutorial, topic guides, and a complete generated API
       reference, built and deployed by CI with doctests green — `deploydocs()`
       is wired but **publishing still needs a human to add the
@@ -367,9 +409,13 @@ polish not yet scheduled).
       coding session.
 
 **Other items still open, not covered by the checklist above:**
-- A5 STL parameter control — investigated, confirmed **genuinely unreachable**
-  with current bindings (`STLParameters` can't reach `STLGeometry::GenerateMesh`);
-  not a "not done yet," a real upstream blocker.
+- A4 `FindOpenElements`/`FindOpenSegments` counts — **done** in the C++
+  binding follow-up round (see above); struck from "still open."
+- A5 STL parameter control — confirmed genuinely unreachable at the
+  Netgen-core level (not just the binding layer); the specific upstream fix
+  it needs (`DLL_HEADER` on `STLMeshingDummy`) has a PR open. **Blocked on
+  an external PR review/merge + a new `NGSolveNetgen_jll` build**, not
+  something to revisit locally until that lands.
 - A7 Periodic identifications (`Identifications` class) — deliberately
   deferred per the original plan; still open, no consumer need yet.
 - B2 Return-type polish (Int32→Int decision, tuple→NamedTuple conversions
