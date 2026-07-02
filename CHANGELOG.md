@@ -4,6 +4,27 @@ All notable changes to Delone.jl are documented in this file.
 
 ## [Unreleased]
 
+### Added — Gmsh backend selector and BREP-string bridge
+- **`generate_mesh(geom; backend=:gmsh, maxh=...)`**: a familiar-verb
+  alternative to calling `generate_gmsh_mesh` directly. Additive kwarg
+  (default `:netgen`, zero behavior change for existing callers); rejects
+  `options=`/`result=true` with a clear `ArgumentError` under `backend=:gmsh`
+  rather than silently ignoring Netgen-specific settings Gmsh has no
+  equivalent for yet.
+- **`gmsh_mesh_from_brep_string(brep; maxh=nothing)`**: the Gmsh-backend
+  analogue of `occ_geometry_from_brep_string`'s in-memory BREP-string
+  bridge for Netgen. Gmsh's own API has no in-memory-string import, so this
+  writes `brep` to a temporary file internally and delegates to
+  `generate_gmsh_mesh` — same safety profile as the Netgen path. Considered
+  and rejected Gmsh's `importShapesNativePointer` (a raw-pointer,
+  zero-copy alternative): Gmsh's own docs call it unsafe/undefined-behavior
+  on a bad pointer, and it would rely on Monge's and Gmsh's independently-
+  built OCCT libraries staying ABI-identical indefinitely, which isn't
+  guaranteed.
+- Both additions keep `Gmsh` a weakdep (not a hard dependency) — considered
+  and rejected making it hard: `gmsh_jll` pulls in Cairo/FLTK/X11/its own
+  OCCT, real install weight a Netgen-only user shouldn't pay by default.
+
 ### Added — Gmsh as a second, optional meshing backend
 - **`generate_gmsh_mesh(path; maxh=nothing) -> MeshLevelSnapshot`**
   (`ext/DeloneGmshExt.jl`, active once the registered `Gmsh` package is

@@ -505,6 +505,17 @@ directly relevant to the user's RVE homogenization work) gets integrated,
 given its CLI-only, no-library packaging is a fundamentally different shape
 than this Gmsh integration.
 
+**Follow-up (2026-07-02): backend selector + BREP bridge added.**
+`generate_mesh(geom; backend=:gmsh, maxh=...)` — a familiar-verb alternative
+to `generate_gmsh_mesh` — and `gmsh_mesh_from_brep_string` (the Netgen-side
+`occ_geometry_from_brep_string`'s analogue, mirroring Monge.jl's existing
+BREP-string workflow for Gmsh). Reconsidered and **reaffirmed** keeping
+`Gmsh` a weakdep rather than a hard dependency (install-weight tradeoff
+unchanged); reconsidered and **rejected** Gmsh's `importShapesNativePointer`
+zero-copy path in favor of a safe temp-file bridge, since the native-pointer
+route is documented upstream as unsafe and depends on Monge's and Gmsh's
+independently-built OCCT libraries staying ABI-identical indefinitely.
+
 ---
 
 ## Suggested sequencing
