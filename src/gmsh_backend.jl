@@ -21,3 +21,24 @@ function generate_gmsh_mesh(args...; kwargs...)
         "the DeloneGmshExt package extension; see generate_mesh for the " *
         "always-available Netgen backend"))
 end
+
+"""
+    gmsh_mesh_from_brep_string(brep::AbstractString; maxh=nothing) -> MeshLevelSnapshot{3,Float64,Int32}
+
+Mesh an in-memory BREP string (e.g. from `Monge.to_brep_string`) via Gmsh —
+the Gmsh-backend analogue of [`occ_geometry_from_brep_string`](@ref)'s
+BREP-string bridge for Netgen.
+
+Gmsh's own API has no in-memory-string import (unlike Netgen's), so this
+writes `brep` to a temporary `.brep` file internally and delegates to
+[`generate_gmsh_mesh`](@ref) — equivalent to, but safer than, passing a raw
+in-memory shape pointer across two independently-built OCCT libraries.
+Defined by the `DeloneGmshExt` package extension and only becomes usable
+once `Gmsh` is loaded (`using Gmsh`).
+"""
+function gmsh_mesh_from_brep_string(args...; kwargs...)
+    throw(ArgumentError(
+        "gmsh_mesh_from_brep_string requires Gmsh to be loaded (`using Gmsh`) to " *
+        "activate the DeloneGmshExt package extension; see " *
+        "occ_geometry_from_brep_string for the always-available Netgen backend"))
+end

@@ -88,7 +88,7 @@ export mesh_from_arrays
 export add_volume_element!, add_surface_element!
 
 # --- Gmsh backend (optional, weakdep) ---------------------------------------
-export generate_gmsh_mesh
+export generate_gmsh_mesh, gmsh_mesh_from_brep_string
 
 # --- mesh introspection -----------------------------------------------------
 export num_nodes, num_cells, num_boundary_facets, mesh_dimension, connectivity

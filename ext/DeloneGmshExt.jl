@@ -60,6 +60,16 @@ function Delone.generate_gmsh_mesh(path::AbstractString; maxh::Union{Nothing,Rea
     end
 end
 
+function Delone.gmsh_mesh_from_brep_string(brep::AbstractString; maxh::Union{Nothing,Real}=nothing)
+    path = tempname() * ".brep"
+    try
+        write(path, brep)
+        return Delone.generate_gmsh_mesh(path; maxh=maxh)
+    finally
+        isfile(path) && rm(path; force=true)
+    end
+end
+
 function _extract_snapshot()
     node_tags, coord, _ = gmsh.model.mesh.getNodes()
     n = length(node_tags)
