@@ -123,10 +123,10 @@ walkthrough — this same example with prose explaining each step, plus
 geom = load_step("model.step")          # also load_brep / load_iges / load_stl
 geom = load_geometry("model.brep")      # dispatch on extension (.step/.brep/.iges/.stl)
 
-# 3D CAD modeling via OpenCascade.jl (separate package), then BREP interop:
-using OpenCascade, Delone
-shape = cut(box(2, 2, 2), sphere(0.6; center=gp_Pnt(1, 1, 1)))
-geom  = occ_geometry_from_brep_string(to_brep_string(shape))
+# 3D CAD modeling via OpenCascade.jl (package "Monge"), then BREP interop:
+using Monge, Delone
+shape = subtract(box(2, 2, 2), sphere(0.6; center=Point(1, 1, 1)))
+mesh  = generate_mesh(shape; maxh=0.3)  # backend-agnostic: pass the Monge.Body directly
 
 # 2D CSG (geom2d): Circle / Rectangle with boolean ops + - *
 plate = Rectangle(-1.0,-1.0, 1.0,1.0, "plate", "outer")

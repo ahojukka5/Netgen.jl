@@ -55,12 +55,24 @@ import via the in-memory BREP boundary:
      a dependency of docs/Project.toml, so `using OpenCascade` cannot execute
      during the docs build. -->
 ```julia
-using OpenCascade, Delone
+using Monge, Delone
 
 body = cylinder(1.0, 2.0)
 geom = occ_geometry_from_brep_string(to_brep_string(body))
 mesh = generate_mesh(geom; maxh=0.3)
 ```
+
+Since `Monge` is a real dependency of Delone.jl (not an optional weakdep — this bridge is always available), [`generate_mesh`](@ref) also accepts a `Monge.Body` directly, skipping the explicit BREP-string round trip:
+
+```julia
+mesh = generate_mesh(body; maxh=0.3)                    # same result as above
+snapshot = generate_mesh(body; maxh=0.3, backend=:gmsh)  # or via Gmsh, same body
+```
+
+This is the backend-agnostic entry point: the same `body` works with either
+backend by just changing `backend=`, with no need to remember which
+bridge function (`occ_geometry_from_brep_string` vs
+[`gmsh_mesh_from_brep_string`](@ref)) goes with which one.
 
 ### Booleans
 
@@ -95,7 +107,7 @@ interpolation error).
 <!-- not converted to @example: depends on OpenCascade.jl (see above), which
      is not available in the docs build environment. -->
 ```julia
-using OpenCascade, Delone
+using Monge, Delone
 
 geom = occ_geometry_from_brep_string(to_brep_string(box(1, 1, 1)))
 geom = identify_periodic_box!(geom, :x; name="periodic_x")
@@ -175,9 +187,11 @@ relies on Monge's and Gmsh's independently-built OCCT libraries staying
 ABI-identical — not a risk worth taking here):
 
 ```julia
-using OpenCascade, Delone, Gmsh
+using Monge, Delone, Gmsh
 
 s = gmsh_mesh_from_brep_string(to_brep_string(box(1, 1, 1)); maxh=0.3)
+# or, equivalently, via the backend-agnostic entry point:
+s = generate_mesh(box(1, 1, 1); maxh=0.3, backend=:gmsh)
 ```
 
 ## Choosing a workflow
@@ -186,7 +200,7 @@ s = gmsh_mesh_from_brep_string(to_brep_string(box(1, 1, 1)); maxh=0.3)
 |------|----------------|
 | Existing CAD part | `load_step` / `load_brep` |
 | Parametric 2D domain | `Circle` / `Rectangle` CSG |
-| Custom 3D solid | OpenCascade.jl → `occ_geometry_from_brep_string` |
+| Custom 3D solid | `Monge.Body` → `generate_mesh(body; backend=...)` |
 | Surface scan | `load_stl` |
 
 Next: [Meshing](@ref "Meshing") turns any of these geometries into a simplicial mesh.

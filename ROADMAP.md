@@ -575,6 +575,31 @@ zero-copy path in favor of a safe temp-file bridge, since the native-pointer
 route is documented upstream as unsafe and depends on Monge's and Gmsh's
 independently-built OCCT libraries staying ABI-identical indefinitely.
 
+**Follow-up (2026-07-03): unified geometry entry point for CAD bodies.**
+Before this, building a mesh from an in-memory `Monge.Body` required
+knowing which backend-specific bridge function to call
+(`occ_geometry_from_brep_string` for Netgen, `gmsh_mesh_from_brep_string`
+for Gmsh) — a real asymmetry, since `generate_mesh` already took a
+`NetgenGeometry` object for one backend and a raw file-path string for the
+other. `generate_mesh(body::Monge.Body; maxh=..., backend=:netgen|:gmsh)`
+(`src/interop.jl`) now accepts a CAD body directly and does the BREP-string
+conversion + backend dispatch internally, so the same `body` value works
+with either backend by only changing `backend=`.
+
+Tried a weakdep + `DeloneMongeExt` package extension first (matching the
+Gmsh precedent), but reverted it: Monge is not like Gmsh here — it is
+**already** a hard, first-party monorepo `[deps]` entry purely so
+`julia --project=. test/runtests.jl` works without a separate test
+`Project.toml` (see `test/runtests.jl`'s comment), and that setup's
+`Pkg.develop`-if-missing fallback unconditionally re-promotes any weakdep
+declaration back into `[deps]` on a fresh checkout, silently undoing the
+extension split every time. Implemented as a plain method on
+`generate_mesh` in `src/interop.jl` instead — no new [weakdeps]/[extensions]
+entries, no test-workflow conflict. Note: **2D CSG is deliberately not
+unified** — Netgen's `Circle`/`Rectangle`/`CSG2d` has no Gmsh equivalent,
+and reimplementing that boolean lowering against Gmsh's own OCC kernel
+would be speculative (all real usage here is 3D).
+
 ---
 
 ## Suggested sequencing

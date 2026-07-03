@@ -4,6 +4,22 @@ All notable changes to Delone.jl are documented in this file.
 
 ## [Unreleased]
 
+### Added — unified geometry entry point for CAD bodies
+- **`generate_mesh(body::Monge.Body; maxh=..., backend=:netgen|:gmsh)`**
+  (`src/interop.jl`): mesh an in-memory OpenCascade.jl (`Monge`) CAD body
+  directly, without manually converting to a BREP string and picking the
+  right backend-specific bridge function
+  (`occ_geometry_from_brep_string`/`gmsh_mesh_from_brep_string`). Same
+  `body`, same verb, either backend — just change `backend=`.
+- Implemented as a plain method in `src/interop.jl`, not a package
+  extension: Monge is already a real `[deps]` entry (unlike Gmsh) for the
+  monorepo's `julia --project=. test/runtests.jl` workflow, and a
+  weakdep/extension split was tried and reverted after it conflicted with
+  that workflow's `Pkg.develop`-if-missing fallback (see ROADMAP.md
+  Workstream F2 for the full account).
+- Deliberately does **not** unify Netgen's 2D CSG (`Circle`/`Rectangle`);
+  no Gmsh equivalent exists and there's no current 2D use case.
+
 ### Added — multi-fragment periodic face pairing
 - **`identify_periodic!`/`identify_periodic_box!`** (`src/periodic.jl`) now
   accept `Vector{<:Integer}` for `facenr_me`/`facenr_you`, not just a single
