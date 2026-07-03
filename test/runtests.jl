@@ -91,5 +91,6 @@ const CYLINDER = joinpath(@__DIR__, "fixtures", "cylinder.brep")  # unit cylinde
     include("geometrybasics_ext.jl")
     include("writevtk_ext.jl")
     include("gmsh_backend.jl")
+    include("gmsh_rve.jl")
     include("monge_backend.jl")
 end
