@@ -280,9 +280,13 @@ described above. `backend=:gmsh` instead delegates to
 `ArgumentError` otherwise) and returns a `MeshLevelSnapshot` directly —
 Gmsh's own session model has no comparable live mesh handle to return.
 Under `backend=:gmsh`, `geom` must be a file path (STEP/IGES/BREP; Gmsh's
-own API is file-based, unlike Netgen's geometry objects), only `maxh` is
-honored, and `options=`/`result=true` throw `ArgumentError` rather than
-silently ignoring Netgen-specific settings Gmsh has no equivalent for.
+own API is file-based, unlike Netgen's geometry objects); `options=` and
+`result=true` throw `ArgumentError` (Netgen-specific structured diagnostics
+have no Gmsh equivalent, and `generate_gmsh_mesh(...; result=true)`'s own
+[`GmshMeshGenerationResult`](@ref) is a different shape — call
+[`generate_gmsh_mesh`](@ref) directly for that). All other keywords
+(`maxh`, `regions`, `boundary_names`, `refine_near`, `periodic`,
+`periodic_box`, ...) are forwarded to [`generate_gmsh_mesh`](@ref) verbatim.
 
 A `Monge.Body` (an in-memory CAD shape from OpenCascade.jl) can also be
 passed directly as `geometry` (see `src/interop.jl`) — the backend-agnostic
@@ -290,19 +294,20 @@ alternative to converting to a BREP string and picking
 [`occ_geometry_from_brep_string`](@ref)/[`gmsh_mesh_from_brep_string`](@ref)
 by hand: `generate_mesh(body; maxh=..., backend=:netgen)` and
 `generate_mesh(body; maxh=..., backend=:gmsh)` both work from the same
-`body`, with the same `backend=:gmsh` restrictions (`maxh` only) as above.
+`body`, with the same `backend=:gmsh` restrictions and keyword-forwarding
+behavior as above.
 """
 function generate_mesh(geom; options=nothing, maxh=nothing, result::Bool=false,
                         backend::Symbol=:netgen, kwargs...)
     if backend === :gmsh
         (options === nothing && !result) || throw(ArgumentError(
             "generate_mesh: backend=:gmsh does not support options=MeshOptions(...) " *
-            "or result=true (Netgen-specific structured diagnostics); only maxh is " *
-            "currently honored for the Gmsh backend"))
+            "or result=true (Netgen-specific structured diagnostics; call " *
+            "generate_gmsh_mesh(...; result=true) directly for GmshMeshGenerationResult)"))
         geom isa AbstractString || throw(ArgumentError(
             "generate_mesh: backend=:gmsh expects geom to be a file path " *
             "(STEP/IGES/BREP), got $(typeof(geom))"))
-        return generate_gmsh_mesh(geom; maxh=maxh)
+        return generate_gmsh_mesh(geom; maxh=maxh, kwargs...)
     elseif backend !== :netgen
         throw(ArgumentError("generate_mesh: unknown backend $backend (expected :netgen or :gmsh)"))
     end
