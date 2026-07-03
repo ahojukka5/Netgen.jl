@@ -30,14 +30,23 @@ const CYLINDER = joinpath(@__DIR__, "fixtures", "cylinder.brep")  # unit cylinde
             # scope for this change; left as a note for whoever owns
             # Project.toml's [compat] section generally.
             deps_compat = false,
-            # Monge and Aqua are declared as real [deps] (not a separate test
-            # target) so this monorepo-style setup can `Pkg.develop` a sibling
-            # checkout and run `julia --project=. test/runtests.jl` directly
-            # (no `Pkg.test()` synthetic test env). Both are used only from
-            # test/runtests.jl, never from src/, so Aqua's stale-deps heuristic
-            # (which expects test-only deps under [extras]/[targets]) always
-            # flags them here. This is a structural false positive from the
-            # repo's dependency-declaration convention, not a real stale dep.
+            # Aqua is declared as a real [deps] entry (not a separate test
+            # target) so this monorepo-style setup can run
+            # `julia --project=. test/runtests.jl` directly (no `Pkg.test()`
+            # synthetic test env). It's used only from test/runtests.jl,
+            # never from src/, so Aqua's stale-deps heuristic (which expects
+            # test-only deps under [extras]/[targets]) always flags it here.
+            # This is a structural false positive from the repo's
+            # dependency-declaration convention, not a real stale dep. (Monge
+            # is a real [deps] entry for the same monorepo reason, but is
+            # also genuinely used from src/ now — see `src/interop.jl`'s
+            # `generate_mesh(::Monge.Body)` — so it wouldn't need this
+            # exemption on its own merits even without the monorepo
+            # workaround. A weakdep/extension split was tried and reverted:
+            # the `Pkg.develop` fallback below unconditionally re-promotes
+            # Monge into [deps] whenever it's missing from the manifest,
+            # which fights a [weakdeps]-only declaration on every fresh
+            # checkout.)
             stale_deps = false,
             unbound_args = true,
             undefined_exports = true,
@@ -82,4 +91,5 @@ const CYLINDER = joinpath(@__DIR__, "fixtures", "cylinder.brep")  # unit cylinde
     include("geometrybasics_ext.jl")
     include("writevtk_ext.jl")
     include("gmsh_backend.jl")
+    include("monge_backend.jl")
 end
