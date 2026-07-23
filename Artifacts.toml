@@ -1,5 +1,13 @@
 [NGSolveNetgen]
 git-tree-sha1 = "22b6752d1a2d14a9e02e48ea3abfbf3d901ac79b"
 
+    [[NGSolveNetgen.download]]
+    url = "https://github.com/ahojukka5/oodi-artifacts/releases/download/NGSolveNetgen-22b6752d/NGSolveNetgen.tar.gz"
+    sha256 = "b35522e610fb8c10f201dbdcc87c0be3e1036892e7779f7de0cb9cc76dd3406a"
+
 [libnetgen_cxxwrap]
 git-tree-sha1 = "890f20b27126f7543501b47059fb2e91645d9763"
+
+    [[libnetgen_cxxwrap.download]]
+    url = "https://github.com/ahojukka5/oodi-artifacts/releases/download/libnetgen_cxxwrap-890f20b2/libnetgen_cxxwrap.tar.gz"
+    sha256 = "3f1eaa510d32e1186930de71c7fd6d3c1c8a8135f856d5c64d98348887f01d71"
